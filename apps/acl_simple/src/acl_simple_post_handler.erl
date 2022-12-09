@@ -1,14 +1,16 @@
 -module(acl_simple_post_handler).
 -author('Mykhailo Krasniuk <miha.190901@gmail.com>').
+
 -export([init/2]).
+
 -include("acl_simple.hrl").
 
 init(Req, Opts) ->
-    ?LOG_INFO("~nReq = ~p", [Req]),
-    Method = cowboy_req:method(Req), %Получение метода
-    HasBody = cowboy_req:has_body(Req), % Есть ли тело? true|false
+    Method = cowboy_req:method(Req),
+    HasBody = cowboy_req:has_body(Req),
     Resp = handle_post(Method, HasBody, Req),
     {ok, Resp, Opts}.
+
 
 handle_post(<<"POST">>, true, Req) ->
     {ok, Body, _Req} = cowboy_req:read_body(Req),
@@ -16,38 +18,52 @@ handle_post(<<"POST">>, true, Req) ->
         Map = jsone:decode(Body),
         Method = binary_to_atom(maps:get(<<"method">>, Map), latin1),
         [{acl_simple_server, Pid}] = ets:lookup(acl_simple, acl_simple_server),
-        Reply = handle_method(Method, Map, Pid),
-        case Reply of
-            unknownMethod ->
-                cowboy_req:reply(400, #{<<"content-type">> => <<"text/plain">>}, <<"error">>, Req);
-            _ ->
-                cowboy_req:reply(200, #{<<"content-type">> => <<"text/plain">>}, jsone:encode(Reply), Req)
-        end
+        handle_method(Method, Map, Pid, Req)
     catch
-        _:_ -> cowboy_req:reply(400, #{<<"content-type">> => <<"text/plain">>}, <<"error in json">>, Req)
+        _:_ ->
+            ?LOG_ERROR("400; invalid syntax of json", []),
+            cowboy_req:reply(400, #{<<"content-type">> => <<"text/plain">>}, <<"invalid syntax of json">>, Req)
     end;
-handle_post(_Method, _, Req) ->
+handle_post(Method, _, Req) ->
+    ?LOG_ERROR("405; Not used method: ~p", [Method]),
     cowboy_req:reply(405, Req).
 
-handle_method(user_add, Map, Pid) ->
+
+handle_method(user_add, Map, Pid, Req) ->
     NewUser = maps:get(<<"user">>, Map),
-    gen_server:call(Pid, {user_add, NewUser});
-handle_method(user_delete, Map, Pid) ->
+    Reply = gen_server:call(Pid, {user_add, NewUser}),
+    reply_answer(Reply, Req);
+handle_method(user_delete, Map, Pid, Req) ->
     User = maps:get(<<"user">>, Map),
-    gen_server:call(Pid, {user_delete, User});
-handle_method(show_all_users, _Map, Pid) -> gen_server:call(Pid, {show_all_users});
-handle_method(roles_add, Map, Pid) ->
+    Reply = gen_server:call(Pid, {user_delete, User}),
+    reply_answer(Reply, Req);
+handle_method(show_all_users, _Map, Pid, Req) ->
+    Reply = gen_server:call(Pid, {show_all_users}),
+    reply_answer(Reply, Req);
+handle_method(roles_add, Map, Pid, Req) ->
     User = maps:get(<<"user">>, Map),
     Roles = maps:get(<<"roles">>, Map),
-    gen_server:call(Pid, {roles_add, User, Roles});
-handle_method(roles_delete, Map, Pid) ->
+    Reply = gen_server:call(Pid, {roles_add, User, Roles}),
+    reply_answer(Reply, Req);
+handle_method(roles_delete, Map, Pid, Req) ->
     User = maps:get(<<"user">>, Map),
     Roles = maps:get(<<"roles">>, Map),
-    gen_server:call(Pid, {roles_delete, User, Roles});
-handle_method(show_roles, Map, Pid) ->
+    Reply = gen_server:call(Pid, {roles_delete, User, Roles}),
+    reply_answer(Reply, Req);
+handle_method(show_roles, Map, Pid, Req) ->
     User = maps:get(<<"user">>, Map),
-    gen_server:call(Pid, {show_roles, User});
-handle_method(show_allow_roles, _Map, Pid) ->
-    gen_server:call(Pid, {show_allow_roles});
-handle_method(_UnknownMethod, _, _Pid) ->
-    unknownMethod.
+    Reply = gen_server:call(Pid, {show_roles, User}),
+    reply_answer(Reply, Req);
+handle_method(show_allow_roles, _Map, Pid, Req) ->
+    Reply = gen_server:call(Pid, {show_allow_roles}),
+    reply_answer(Reply, Req);
+handle_method(_UnknownMethod, _Map, _Pid, Req) ->
+    reply_answer(unknownMethod, Req).
+
+reply_answer(unknownMethod, Req) ->
+    ?LOG_ERROR("400; unknown method in body", []),
+    cowboy_req:reply(400, #{<<"content-type">> => <<"text/plain">>}, <<"unknown method in body">>, Req);
+reply_answer(Reply, Req) ->
+    %?LOG_INFO("200; Reply = ~p",[Reply]),
+    cowboy_req:reply(200, #{<<"content-type">> => <<"text/plain">>}, jsone:encode(Reply), Req)
+.

@@ -12,7 +12,6 @@ start(_StartType, _StartArgs) ->
     acl_simple = ets:new(acl_simple, [set, public, named_table]),
 
     {ok, Port} = application:get_env(acl_simple, listen_port),
-
     Dispatch = cowboy_router:compile([
         {'_', [
             {"/", acl_simple_post_handler, []}

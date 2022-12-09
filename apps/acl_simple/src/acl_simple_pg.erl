@@ -54,9 +54,14 @@ delete(Statement, Args) ->
 check_connect(WorkerPid) ->
     WorkerPid ! {is_connect, self()},
     receive
-        ok -> ok;
-        no_connect -> no_connect
-    after 500 -> no_connect
+        ok ->
+            ok;
+        no_connect ->
+            ?LOG_ERROR("no connect with db", []),
+            no_connect
+    after 500 ->
+        ?LOG_ERROR("no connect with db", []),
+        no_connect
     end.
 
 
@@ -65,13 +70,11 @@ check_connect(WorkerPid) ->
 % ====================================================
 
 init(Args) ->
-    ?LOG_INFO("-> Clone was created ", []),
     self() ! connect,
     State = Args,
     {ok, State}.
 
 terminate(_, _State) ->
-    ?LOG_INFO("-> Clone of pool was dead ", []),
     ok.
 
 
@@ -143,7 +146,7 @@ parse(Conn) -> %?LOG_INFO("-> do parse", []),
 send_to_bd(Conn, Statement, Args) -> % INTERFACE between prepared_query of DB, and handle_call...
     case epgsql:prepared_query(Conn, Statement, Args) of
         {error, Error} ->
-            ?LOG_ERROR("-> PostgreSQL error(~p): ~p~n", [Statement, Error]),
+            ?LOG_ERROR("PostgreSQL prepared_query error(~p): ~p~n", [Statement, Error]),
             {error, Error};
         Other -> Other
     end.
@@ -152,8 +155,10 @@ send_to_bd(Conn, Statement, Args) -> % INTERFACE between prepared_query of DB, a
 get_worker_of_pool(Pool) ->
     ClonePid = poolboy:checkout(Pool),
     case ClonePid of
-        full -> ok = io:format("~npoolboy: All workers are busy"), Return = error;
-        ClonePid -> Return = ClonePid
-    end,
-    Return.
+        full ->
+            ?LOG_ERROR("All workers are busy. Pool(~p)", [Pool]),
+            error;
+        ClonePid ->
+            ClonePid
+    end.
 
