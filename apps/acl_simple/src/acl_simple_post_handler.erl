@@ -20,8 +20,11 @@ handle_post(<<"POST">>, true, Req) ->
         [{acl_simple_server, Pid}] = ets:lookup(acl_simple, acl_simple_server),
         handle_method(Method, Map, Pid, Req)
     catch
-        _:_ ->
-            ?LOG_ERROR("400; invalid syntax of json", []),
+        exit:{timeout, Other} ->
+            ?LOG_ERROR("503; server overloaded (exit : {timeout, ~p})", [Other]),
+            cowboy_req:reply(503, #{<<"content-type">> => <<"text/plain">>}, <<"server overloaded">>, Req);
+        Exception:Reason ->
+            ?LOG_ERROR("400; invalid syntax of json (~p : ~p)", [Exception, Reason]),
             cowboy_req:reply(400, #{<<"content-type">> => <<"text/plain">>}, <<"invalid syntax of json">>, Req)
     end;
 handle_post(Method, _, Req) ->

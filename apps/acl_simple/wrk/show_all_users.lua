@@ -1,10 +1,7 @@
-
 request = function()
     path = "/"
     wrk.headers["Content-Type"] = "application/json; charset=utf-8"
-    local user = 'mike_test' --.. tostring( math.random(0, 100000))
-    wrk.body = '{"method":"user_add", "user":"'.. user ..'"}'
-   -- a = a + 1
+    wrk.body = '{"method":"show_all_users"}'
     return wrk.format("POST", path)
 end
 
