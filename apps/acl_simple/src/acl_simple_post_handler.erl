@@ -17,7 +17,7 @@ handle_post(<<"POST">>, true, Req) ->
     try
         Map = jsone:decode(Body),
         Method = binary_to_atom(maps:get(<<"method">>, Map), latin1),
-        [{acl_simple_server, Pid}] = ets:lookup(acl_simple, acl_simple_server),
+        [{acl_simple_worker, Pid}] = ets:lookup(acl_simple, acl_simple_worker),
         handle_method(Method, Map, Pid, Req)
     catch
         exit:{timeout, Other} ->

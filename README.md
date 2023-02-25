@@ -23,7 +23,7 @@ Data developer
 
 API
 -----
-    acl_simple_server:
+    acl_simple_worker:
         State = #{<<"User">> => [<<"Role">>, ..], ..},
     
         handle_call:                                                                Have cache     Benchmark(wrk2)   Delay(wrk2)

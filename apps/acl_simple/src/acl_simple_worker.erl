@@ -1,4 +1,4 @@
--module(acl_simple_server).
+-module(acl_simple_worker).
 -author('Mykhailo Krasniuk <miha.190901@gmail.com>').
 -behavior(gen_server).
 
@@ -22,7 +22,7 @@ stop(Pid) ->
 % ====================================================
 
 init([]) ->
-    true = ets:insert(acl_simple, [{acl_simple_server, self()}]),
+    true = ets:insert(acl_simple, [{acl_simple_worker, self()}]),
     {ok, []}.
 
 terminate(_, _State) ->

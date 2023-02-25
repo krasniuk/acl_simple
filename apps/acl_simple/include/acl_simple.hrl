@@ -37,3 +37,8 @@
     <<"user">> => UserName,
     <<"roles">> => Roles
   }).
+
+-define(JSON_DEVELOPMENT,
+  #{
+    <<"result">> => <<"develop now">>
+  }).

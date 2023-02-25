@@ -141,7 +141,7 @@ parse(Conn) -> %?LOG_INFO("-> do parse", []),
     {ok, _} = epgsql:parse(Conn, "users_delete_by_name", "DELETE FROM users WHERE name = $1", [varchar]),
     {ok, _} = epgsql:parse(Conn, "roles_delete_by_name", "DELETE FROM roles WHERE user_id = (SELECT id FROM users WHERE name = $1) AND role = $2", [varchar, varchar]),
     %?LOG_INFO("-> exit parse", []),
-    ok.
+    ?LOG_DEBUG("Parse OK~n", []).
 
 send_to_bd(Conn, Statement, Args) -> % INTERFACE between prepared_query of DB, and handle_call...
     case epgsql:prepared_query(Conn, Statement, Args) of
