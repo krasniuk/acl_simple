@@ -4,12 +4,23 @@
 
 -include("acl_simple.hrl").
 
+%% ------------------------------------------------------------------
+%% gen_server Function Exports
+%% ------------------------------------------------------------------
+
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3]).
+
+
+%% ------------------------------------------------------------------
+%% API Function Exports
+%% ------------------------------------------------------------------
+
 -export([start_link/0, stop/1]).
 
-% ====================================================
-% Users functions
-% ====================================================
+
+%% ------------------------------------------------------------------
+%% API Function Definitions
+%% ------------------------------------------------------------------
 
 start_link() ->
     gen_server:start_link(?MODULE, [], []).
@@ -17,9 +28,9 @@ stop(Pid) ->
     gen_server:call(Pid, terminate).
 
 
-% ====================================================
-% Inverse functions
-% ====================================================
+%% ------------------------------------------------------------------
+%% gen_server Function Definitions
+%% ------------------------------------------------------------------
 
 init([]) ->
     true = ets:insert(acl_simple, [{acl_simple_worker, self()}]),
@@ -73,9 +84,9 @@ code_change(_OldVsn, State, _Extra) ->
 
 
 
-% ====================================================
-% Help-functions for inverse functions
-% ====================================================
+%% ------------------------------------------------------------------
+%% Internal Function Definitions
+%% ------------------------------------------------------------------
 
 -spec user_add_handler(binary()) -> map().
 user_add_handler(UserName) ->
@@ -194,7 +205,7 @@ roles_delete_handler(UserName, Roles) ->
     end.
 
 
-% ====================================================
+%%% =============================================================
 
 
 -spec is_real_roles(list()) -> true | false.
@@ -231,8 +242,6 @@ insert_roles_in_db(UserName, RolesOld, [H | T]) ->
             insert_roles_in_db(UserName, RolesOld, T)
     end.
 
-% -----------------
-
 -spec get_map_from_db() -> no_connect | {error, any()} | map().
 get_map_from_db() ->
     case acl_simple_pg:select("get_all_users", []) of
@@ -244,6 +253,8 @@ get_map_from_db() ->
             {error, Error}
     end.
 
+%%% =============================================================
+
 -spec convert_to_map(list(), map()) -> map().
 convert_to_map([], Map) -> Map;
 convert_to_map([{Name} | T], Map0) ->
@@ -251,6 +262,8 @@ convert_to_map([{Name} | T], Map0) ->
     RolesList = handler_convert_to_map(RolesList_Dirty),
     Map = Map0#{Name => RolesList},
     convert_to_map(T, Map).
+
+%%% =============================================================
 
 -spec handler_convert_to_map(list()) -> list().
 handler_convert_to_map([]) -> [];
