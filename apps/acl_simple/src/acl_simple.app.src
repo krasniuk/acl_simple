@@ -1,6 +1,6 @@
 {application, acl_simple,
  [{description, "An OTP application"},
-  {vsn, "0.3.110"},
+  {vsn, "0.3.111"},
   {registered, []},
   {mod, {acl_simple_app, []}},
   {applications,
