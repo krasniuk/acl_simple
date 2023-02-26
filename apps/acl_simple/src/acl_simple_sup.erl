@@ -18,5 +18,6 @@ init([]) ->
     SupFlags = {one_for_one, 5, 100},
     Server = {acl_simple_worker, {acl_simple_worker, start_link, []}, permanent, 1000, worker, []},
     TimerCache = {acl_simple_timer_cache, {acl_simple_timer_cache, start_link, []}, permanent, 1000, worker, []},
+    MqQueue = {acl_simple_mq, {acl_simple_mq, start_link, []}, permanent, 1000, worker, [acl_simple_mq]},
 
-    {ok, {SupFlags, PoolSpecs ++ [TimerCache, Server]}}.
+    {ok, {SupFlags, PoolSpecs ++ [TimerCache, Server, MqQueue]}}.
