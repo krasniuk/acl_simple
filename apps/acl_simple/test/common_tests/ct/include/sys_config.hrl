@@ -1,0 +1,97 @@
+-author('Mykhailo Krasniuk <miha.190901@gmail.com>').
+
+-define(START_ENV,
+    [
+        {acl_simple, [
+            {listen_port, 1913},
+            {timer_cache, 10000},
+% --- amqp_client ---
+            {mq_user, "admin"},
+            {mq_password, "48228"},
+            {mq_host, "127.0.0.1"},
+            {mq_reserve_host, "127.0.0.1"},
+            {mq_queue, "acl_queue"},
+            {mq_virtual_host, "/"},
+            {mq_consume_limit, 1}
+% === =========== ===
+        ]},
+
+        {poolboy, [
+            {pools, [
+                {pg_pool, [
+                    {name, {local, pg_pool}},
+                    {strategy, fifo},
+                    {worker_module, acl_simple_pg},
+                    {size, 10},
+                    {max_overflow, 5}
+                ], [
+                    {host, "127.0.0.1"},
+                    {port, 5432},
+                    {username, "trembita"},
+                    {password, "trembita"},
+                    {database, "civil"}]}
+            ]}
+        ]},
+
+        {lager, [
+%% What handlers to install with what arguments
+%% The defaults for the logfiles are to rotate the files when
+%% they reach 10Mb or at midnight, whichever comes first, and keep
+%% the last 31 rotations.
+            {handlers, [
+                {lager_console_backend, [{level, debug}]},
+                {lager_file_backend, [
+                    {file, "error.log"},
+                    {level, error},
+                    {size, 1073741824}, %% 1Gb
+                    {date, "$D0"},
+                    {count, 20}
+                ]},
+                {lager_file_backend, [
+                    {file, "warning.log"},
+                    {level, warning},
+                    {size, 1073741824}, %% 1Gb
+                    {date, "$D0"},
+                    {count, 20}
+                ]},
+                {lager_file_backend, [
+                    {file, "info.log"},
+                    {level, info},
+                    {size, 1073741824}, %% 1Gb
+                    {date, "$D0"},
+                    {count, 7}
+                ]},
+                {lager_file_backend, [
+                    {file, "debug.log"},
+                    {level, debug},
+                    {size, 1073741824}, %% 1Gb
+                    {date, "$D0"},
+                    {count, 2}
+                ]}
+            ]},
+
+%% Whether to write a crash log, and where.
+%% Commented/omitted/undefined means no crash logger.
+            {crash_log, "crash.log"},
+
+%% Maximum size in bytes of events in the crash log - defaults to 65536
+            {crash_log_msg_size, 65536},
+
+%% Maximum size of the crash log in bytes, before its rotated, set
+%% to 0 to disable rotation - default is 0
+            {crash_log_size, 10485760},
+
+%% What time to rotate the crash log - default is no time
+%% rotation.
+            {crash_log_date, "$D0"},
+
+%% Number of rotated crash logs to keep, 0 means keep only the
+%% current one - default is 0
+            {crash_log_count, 5},
+
+%% Whether to redirect error_logger messages into lager - defaults to true
+            {error_logger_redirect, true},
+
+            {error_logger_hwm, 400}
+        ]}
+    ]).
