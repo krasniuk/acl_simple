@@ -128,7 +128,8 @@ code_change(_OldVsn, State, _Extra) ->
 % Help-functions for inverse functions
 % ====================================================
 
-parse(Conn) -> %?LOG_INFO("-> do parse", []),
+parse(Conn) ->
+    ?LOG_DEBUG("Parse OK", []),
     % INSERT
     {ok, _} = epgsql:parse(Conn, "user_add", "INSERT INTO users (id, name) VALUES ($1, $2)", [varchar, varchar]),
     {ok, _} = epgsql:parse(Conn, "roles_add_by_name", "INSERT INTO roles (user_id, role) VALUES ((SELECT id FROM users WHERE name = $1), $2)", [varchar, varchar]),
