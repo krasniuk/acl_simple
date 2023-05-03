@@ -1,19 +1,20 @@
 acl_simple
 =====
 
-An OTP application
-
 Build
 -----
-
-    $ rebar3 compile
+    $ make rel
+    $ ./_build/prod/rel/acl_simple/bin/acl_simple console
     "or"
     $ ./run.sh
 
+Common tests build
+----
+    $ rebar3 ct --spec apps/acl_simple/tests/common_tests/ct.spec
 
     
 Data developer
-================    
+---- 
     Transmission base: http, POST.
     Transmission format: json.
 
@@ -38,13 +39,16 @@ API
             show_allow_roles({show_allow_roles}).                         (1 ms)   | (1 ms)
 
         
-JSON reqests options
+JSON requests example
 -----
-{
-    "method":"user_add",
-    "user":"Joe",
-    "roles":["read", "exec"]
-}
+    {"method":"show_allow_roles"}
 
+    {"method":"show_all_users"}
+    {"method":"user_delete", "user":"mike_test"}
+    {"method":"user_add", "user":"mike_test"}
+    
+    {"method":"roles_add", "user":"karl_test", "roles":["read"]}
+    {"method":"show_roles", "user":"karl_test"}
+    {"method":"roles_delete", "user":"karl_test", "roles":["exec"]}
 
-
+    
