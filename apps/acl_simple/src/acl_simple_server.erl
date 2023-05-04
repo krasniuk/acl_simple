@@ -91,7 +91,8 @@ user_add_handler(UserName) ->
                     ?JSON_ERROR("User '" ++ [binary_to_list(UserName)] ++ "' exist");
                 error ->
                     Uuid = list_to_binary(uuid:to_string(simple, uuid:uuid1())),
-                    case acl_simple_pg:insert("user_add", [Uuid, UserName]) of
+                    % list_to_binary(jsone:encode(binary_to_list(crypto:hash(sha, <<"1234">>)))
+                    case acl_simple_pg:insert("user_add", [Uuid, UserName, jsone:encode(binary_to_list(crypto:hash(sha, <<"1234">>)))]) of
                         {ok, _} ->
                             Cache = Map#{UserName => []},
                             true = ets:insert(acl_simple, [{server_cache, Cache}]),
