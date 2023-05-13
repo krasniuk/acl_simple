@@ -14,7 +14,8 @@ start(_StartType, _StartArgs) ->
     {ok, Port} = application:get_env(acl_simple, listen_port),
     Dispatch = cowboy_router:compile([
         {'_', [
-            {"/", acl_simple_post_handler, []}
+            {"/admin", acl_simple_admin_handler, []},
+            {"/customer", acl_simple_customer_handler, []}
         ]}
     ]),
     {ok, _} = cowboy:start_clear(http, [{port, Port}], #{

@@ -1,4 +1,4 @@
--module(acl_simple_post_handler).
+-module(acl_simple_admin_handler).
 -author('Mykhailo Krasniuk <miha.190901@gmail.com>').
 
 -export([init/2]).
@@ -33,11 +33,11 @@ handle_body(Body) ->
             handle_package(Map)
     catch
         exit:{timeout, Other} ->
-            ?LOG_ERROR("503; server overloaded (exit : {timeout, ~p})", [Other]),
-            {503, <<"server overloaded">>};
+            ?LOG_ERROR("server overloaded (exit : {timeout, ~p})", [Other]),
+            {503, #{}};
         Exception:Reason ->
             ?LOG_ERROR("400; invalid syntax of json (~p : ~p)", [Exception, Reason]),
-            {400, <<"invalid syntax of json">>}
+            {206, jsone:encode(#{<<"fail">> => <<"Invalid request format">>})}
     end.
 
 handle_package(Map) ->
@@ -61,8 +61,16 @@ handle_parameters({Login, PassHash}, #{<<"method">> := Method} = ParamPack) ->
             {206, jsone:encode(#{<<"fail">> => <<"Invalid passhash or role absent">>})}
     end.
 
-auth(_Login, _PassList, _Method) ->
-    true.
+-spec auth(binary(), list(), binary()) -> true|false.
+auth(Login, Hash, _Method) ->
+    {ok, _, [{JsonHash}]} = acl_simple_pg:select("get_admin_passhash", [Login]),
+    RealHash = jsone:decode(JsonHash),
+    case RealHash == Hash of
+        false ->
+            false;
+        true ->
+            true
+    end.
 
 -spec handle_method(binary(), map()) -> {integer(), binary()}.
 handle_method(<<"user_add">>, Map) ->

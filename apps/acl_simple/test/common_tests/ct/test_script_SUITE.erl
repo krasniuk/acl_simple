@@ -61,7 +61,7 @@ test_script(_Config) ->
     [<<"read">>, <<"write">>] = request(show_roles, {<<"karl_test">>}),
     ok = request(roles_delete, {<<"karl_test">>, [<<"exec">>]}),
     ok = request(roles_delete, {<<"karl_test">>, [<<"exec">>, <<"read">>]}),
-    [<<"write">>] = request(show_roles, {<<"karl_test">>}),,
+    [<<"write">>] = request(show_roles, {<<"karl_test">>}),
     ok = request(roles_delete, {<<"karl_test">>, [<<"write">>]}),
     Roles1 = request(show_roles, {<<"karl_test">>}),
     [] = Roles1,
@@ -84,7 +84,7 @@ request(show_allow_roles, {}) ->
         [{timeout, 4000}], [{body_format, binary}]),
     ok = ct:pal("RespBody = ~p", [jsone:decode(RespBody)]),
     #{<<"result">> := <<"ok">>,
-        <<"roles">> => [<<"read">>, <<"write">>, <<"exec">>]} = jsone:decode(RespBody);
+        <<"roles">> := [<<"read">>, <<"write">>, <<"exec">>]} = jsone:decode(RespBody);
 
 request(show_roles, {User}) ->
     Body = #{<<"method">> => <<"show_roles">>,
@@ -94,8 +94,8 @@ request(show_roles, {User}) ->
         [{timeout, 4000}], [{body_format, binary}]),
     ok = ct:pal("RespBody = ~p", [jsone:decode(RespBody)]),
     #{<<"result">> := <<"ok">>,
-        <<"user">> => <<"mike_test">>,
-        <<"roles">> => ListRoles} = jsone:decode(RespBody),
+        <<"user">> := <<"mike_test">>,
+        <<"roles">> := ListRoles} = jsone:decode(RespBody),
     ListRoles;
 request(roles_add, {User, Roles}) ->
     Body = #{<<"method">> => <<"roles_add">>,

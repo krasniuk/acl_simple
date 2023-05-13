@@ -7,6 +7,7 @@
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3]).
 -export([start_link/0, stop/1]).
 
+
 % ====================================================
 % Users functions
 % ====================================================
@@ -91,7 +92,6 @@ user_add_handler(UserName) ->
                     ?JSON_ERROR("User '" ++ [binary_to_list(UserName)] ++ "' exist");
                 error ->
                     Uuid = list_to_binary(uuid:to_string(simple, uuid:uuid1())),
-                    % list_to_binary(jsone:encode(binary_to_list(crypto:hash(sha, <<"1234">>)))
                     case acl_simple_pg:insert("user_add", [Uuid, UserName, jsone:encode(binary_to_list(crypto:hash(sha, <<"1234">>)))]) of
                         {ok, _} ->
                             Cache = Map#{UserName => []},

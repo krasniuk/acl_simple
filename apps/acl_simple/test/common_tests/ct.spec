@@ -1,1 +1,1 @@
-{suites, "./ct/", all}.
+{suites, "./ct/", [test_fail_SUITE]}.
