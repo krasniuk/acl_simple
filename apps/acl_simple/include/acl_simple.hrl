@@ -37,3 +37,6 @@
     <<"user">> => UserName,
     <<"roles">> => Roles
   }).
+
+-define(JSON_CUSTOM_GET_ROLES_OK(Roles), #{<<"result">> => <<"ok">>,
+                                           <<"roles">> => Roles}).

@@ -76,12 +76,12 @@ auth(Login, Hash, _Method) ->
 
 %% ================== handle_method ==================
 
-handle_method(<<"get_roles">>, #{<<"login">> := UserName} = _Param) ->
+handle_method(<<"get_roles">>, #{<<"login">> := Login} = _Param) ->
     [{_, Cache}] = ets:lookup(acl_simple, server_cache),
-    Reply = case maps:find(UserName, Cache) of
+    Reply = case maps:find(Login, Cache) of
                 {ok, Roles} ->
-                    ?JSON_ROLES_OF_USER(UserName, Roles);
+                    ?JSON_CUSTOM_GET_ROLES_OK(Roles);
                 error ->
-                    ?JSON_ERROR("User '" ++ binary_to_list(UserName) ++ "' is not exist")
+                    ?JSON_ERROR("Login '" ++ binary_to_list(Login) ++ "' is not exist")
             end,
     {200, jsone:encode(Reply)}.

@@ -71,7 +71,7 @@ allow_roles_handler() ->
         no_connect ->
             no_connect;
         {ok, _, AllowRoles} ->
-            ?LOG_INFO("AllowRoles = ~p", [AllowRoles]),
+            %?LOG_INFO("AllowRoles = ~p", [AllowRoles]),
             handler_convert_to_map(AllowRoles)
     end.
 

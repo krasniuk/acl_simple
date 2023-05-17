@@ -32,6 +32,9 @@ terminate(_, _State) ->
 handle_call({user_add, UserName}, _From, State) ->
     Reply = user_add_handler(UserName),
     {reply, Reply, State};
+handle_call({allow_roles_add, UserName}, _From, State) ->
+    Reply = user_add_handler(UserName),
+    {reply, Reply, State};
 handle_call({user_delete, UserName}, _From, State) ->
     Reply = user_delete_handler(UserName),
     {reply, Reply, State};
@@ -58,6 +61,12 @@ handle_call({show_roles, UserName}, _From, _State) ->
 handle_call({show_allow_roles}, _From, State) ->
     Reply = ?JSON_ALL_ROLES,
     {reply, Reply, State};
+handle_call({add_allow_roles, List}, _From, State) ->
+    Reply = add_allow_roles_handler(List),
+    {reply, Reply, State};
+handle_call({delete_allow_roles, List}, _From, State) ->
+    Reply = delete_allow_roles_handler(List),
+    {reply, Reply, State};
 handle_call(_Msg, _From, State) ->
     {reply, unknown_req, State}.
 
@@ -77,6 +86,12 @@ code_change(_OldVsn, State, _Extra) ->
 % ====================================================
 % Help-functions for inverse functions
 % ====================================================
+
+add_allow_roles_handler(_List) ->
+    #{<<"result">> => <<"develop">>}.
+
+delete_allow_roles_handler(_List) ->
+    #{<<"result">> => <<"develop">>}.
 
 -spec user_add_handler(binary()) -> map().
 user_add_handler(UserName) ->
@@ -105,6 +120,7 @@ user_add_handler(UserName) ->
 
 -spec user_delete_handler(binary()) -> map().
 user_delete_handler(UserName) ->
+    [{_, AllowRoles}] = ets:lookup(acl_simple, allow_roles),
     case get_map_from_db() of
         no_connect ->
             ?JSON_ERROR("No connect with db");
@@ -116,7 +132,7 @@ user_delete_handler(UserName) ->
                 error ->
                     ?JSON_ERROR("User '" ++ binary_to_list(UserName) ++"' is not exist");
                 {ok, _} ->
-                    case delete_roles_in_db(?ROLES, UserName) of
+                    case delete_roles_in_db(AllowRoles, UserName) of
                         {error, _} ->
                             ?JSON_ERROR("error in reqare db");
                         ok ->
@@ -197,13 +213,19 @@ roles_delete_handler(UserName, Roles) ->
 
 % ====================================================
 
-
 -spec is_real_roles(list()) -> true | false.
-is_real_roles([]) -> true;
-is_real_roles([H | T]) ->
-    case lists:member(H, ?ROLES) of
-        true -> is_real_roles(T);
-        false -> false
+is_real_roles(List) ->
+    [{_, AllowRoles}] = ets:lookup(acl_simple, allow_roles),
+    is_real_roles(AllowRoles, List).
+
+-spec is_real_roles(list(), list()) -> true | false.
+is_real_roles(_, []) -> true;
+is_real_roles(AllowRoles, [H | T]) ->
+    case lists:member(H, AllowRoles) of
+        true ->
+            is_real_roles(T);
+        false ->
+            false
     end.
 
 -spec delete_roles_in_db(list(), binary()) -> ok | {error, any()}.
