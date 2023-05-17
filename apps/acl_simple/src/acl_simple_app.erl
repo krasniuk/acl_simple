@@ -10,7 +10,8 @@
 start(_StartType, _StartArgs) ->
     ?LOG_INFO("~n~n ========== Application start ==========", []),
     acl_simple = ets:new(acl_simple, [set, public, named_table]),
-
+    true = ets:insert(acl_simple, [{server_cache, #{}}]),
+    % ----------
     {ok, Port} = application:get_env(acl_simple, listen_port),
     Dispatch = cowboy_router:compile([
         {'_', [

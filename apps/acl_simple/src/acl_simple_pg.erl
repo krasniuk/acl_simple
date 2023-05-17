@@ -22,7 +22,8 @@ start_link(Args) -> % Exports for boolboy
 select(Statement, Args) ->
     WorkerPid = get_worker_of_pool(pg_pool),
     Return = case check_connect(WorkerPid) of
-                 no_connect -> no_connect;
+                 no_connect ->
+                     no_connect;
                  ok ->
                      gen_server:call(WorkerPid, {select, Statement, Args})
              end,
@@ -130,6 +131,8 @@ code_change(_OldVsn, State, _Extra) ->
 
 parse(Conn) ->
     ?LOG_DEBUG("Parse OK", []),
+    {ok, _} = epgsql:parse(Conn, "get_allow_roles", "SELECT role FROM allow_roles", []),
+
     {ok, _} = epgsql:parse(Conn, "user_add", "INSERT INTO users (id, name, passhash) VALUES ($1, $2, $3)", [varchar, varchar, json]),
     {ok, _} = epgsql:parse(Conn, "get_passhash", "SELECT passhash FROM users WHERE name = $1", [varchar]),
     {ok, _} = epgsql:parse(Conn, "get_admin_passhash", "SELECT passhash FROM admins WHERE login = $1", [varchar]),
