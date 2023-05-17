@@ -59,7 +59,8 @@ handle_call({show_roles, UserName}, _From, _State) ->
             end,
     {reply, Reply, []};
 handle_call({show_allow_roles}, _From, State) ->
-    Reply = ?JSON_ALL_ROLES,
+    [{_, AllowRoles}] = ets:lookup(acl_simple, allow_roles),
+    Reply = ?JSON_SHOW_ALLOW_ROLES(AllowRoles),
     {reply, Reply, State};
 handle_call({add_allow_roles, List}, _From, State) ->
     Reply = add_allow_roles_handler(List),

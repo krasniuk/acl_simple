@@ -19,11 +19,8 @@
     <<"result">> => <<"ok">>
   }).
 
--define(JSON_ALL_ROLES,
-  #{
-    <<"result">> => <<"ok">>,
-    <<"roles">> => [<<"read">>, <<"write">>, <<"exec">>]
-  }).
+-define(JSON_SHOW_ALLOW_ROLES(ListRoles), #{<<"result">> => <<"ok">>,
+                                            <<"roles">> => ListRoles}).
 
 -define(JSON_USERS(Users),
   #{
