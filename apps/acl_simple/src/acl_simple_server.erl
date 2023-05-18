@@ -62,11 +62,11 @@ handle_call({show_allow_roles}, _From, State) ->
     [{_, AllowRoles}] = ets:lookup(acl_simple, allow_roles),
     Reply = ?JSON_SHOW_ALLOW_ROLES(AllowRoles),
     {reply, Reply, State};
-handle_call({add_allow_roles, List}, _From, State) ->
-    Reply = add_allow_roles_handler(List),
+handle_call({add_allow_roles, ListRoles}, _From, State) ->
+    Reply = add_allow_roles_handler(ListRoles),
     {reply, Reply, State};
-handle_call({delete_allow_roles, List}, _From, State) ->
-    Reply = delete_allow_roles_handler(List),
+handle_call({delete_allow_roles, ListRoles}, _From, State) ->
+    Reply = delete_allow_roles_handler(ListRoles),
     {reply, Reply, State};
 handle_call(_Msg, _From, State) ->
     {reply, unknown_req, State}.
@@ -88,10 +88,10 @@ code_change(_OldVsn, State, _Extra) ->
 % Help-functions for inverse functions
 % ====================================================
 
-add_allow_roles_handler(_List) ->
+add_allow_roles_handler(_ListRoles) ->
     #{<<"result">> => <<"develop">>}.
 
-delete_allow_roles_handler(_List) ->
+delete_allow_roles_handler(_ListRoles) ->
     #{<<"result">> => <<"develop">>}.
 
 -spec user_add_handler(binary()) -> map().

@@ -87,6 +87,7 @@ handle_method(<<"show_all_users">>, _Map) ->
     [{_, Pid}] = ets:lookup(acl_simple, acl_simple_server),
     Reply = gen_server:call(Pid, {show_all_users}),
     {200, jsone:encode(Reply)};
+% --- roles ---
 handle_method(<<"roles_add">>, Map) ->
     [{_, Pid}] = ets:lookup(acl_simple, acl_simple_server),
     User = maps:get(<<"user">>, Map),
@@ -104,7 +105,18 @@ handle_method(<<"show_roles">>, Map) ->
     User = maps:get(<<"user">>, Map),
     Reply = gen_server:call(Pid, {show_roles, User}),
     {200, jsone:encode(Reply)};
+% --- allow_roles ---
 handle_method(<<"show_allow_roles">>, _Map) ->
     [{_, Pid}] = ets:lookup(acl_simple, acl_simple_server),
     Reply = gen_server:call(Pid, {show_allow_roles}),
+    {200, jsone:encode(Reply)};
+handle_method(<<"add_allow_roles">>, Map) ->
+    [{_, Pid}] = ets:lookup(acl_simple, acl_simple_server),
+    #{<<"roles">> := ListRoles} = Map,
+    Reply = gen_server:call(Pid, {add_allow_roles, ListRoles}),
+    {200, jsone:encode(Reply)};
+handle_method(<<"delete_allow_roles">>, Map) ->
+    [{_, Pid}] = ets:lookup(acl_simple, acl_simple_server),
+    #{<<"roles">> := ListRoles} = Map,
+    Reply = gen_server:call(Pid, {delete_allow_roles, ListRoles}),
     {200, jsone:encode(Reply)}.

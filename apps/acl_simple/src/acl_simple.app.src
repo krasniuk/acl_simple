@@ -1,6 +1,6 @@
 {application, acl_simple,
  [{description, "An OTP application"},
-  {vsn, "0.3.44"},
+  {vsn, "0.3.45"},
   {registered, []},
   {mod, {acl_simple_app, []}},
   {applications,
@@ -11,7 +11,6 @@
    ]},
   {env,[]},
   {modules, []},
-
   {licenses, ["Apache 2.0"]},
   {links, []}
  ]}.
