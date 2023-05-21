@@ -118,34 +118,15 @@ user_add_handler(User, PassHash) ->
     ?JSON_OK.
 
 -spec user_delete_handler(binary()) -> map().
-user_delete_handler(UserName) ->
-    [{_, AllowRoles}] = ets:lookup(acl_simple, allow_roles),
-    case get_map_from_db() of
-        no_connect ->
-            ?JSON_ERROR("No connect with db");
-        {error, Error} ->
-            ?LOG_ERROR("Error in reqare db; ~p", [Error]),
-            ?JSON_ERROR("Error in reqare db");
-        Map ->
-            case maps:find(UserName, Map) of
-                error ->
-                    ?JSON_ERROR("User '" ++ binary_to_list(UserName) ++"' is not exist");
-                {ok, _} ->
-                    case delete_roles_in_db(AllowRoles, UserName) of
-                        {error, _} ->
-                            ?JSON_ERROR("error in reqare db");
-                        ok ->
-                            case acl_simple_pg:delete("users_delete_by_name", [UserName]) of
-                                {error, _} ->
-                                    ?JSON_ERROR("error in reqare db");
-                                {ok, _} ->
-                                    Cache = maps:remove(UserName, Map),
-                                    true = ets:insert(acl_simple, [{server_cache, Cache}]),
-                                    ?JSON_OK
-                            end
-                    end
-            end
-    end.
+user_delete_handler(User) ->
+    [{_, Cache}] = ets:lookup(acl_simple, server_cache),
+    ok = validation_user_delete(User, Cache),
+    #{User := RolesList} = Cache,
+    ok = delete_roles_in_db(RolesList, User),
+    {ok, _} = acl_simple_pg:delete("users_delete_by_name", [User]),
+    NewCache = maps:remove(User, Cache),
+    true = ets:insert(acl_simple, [{server_cache, NewCache}]),
+    ?JSON_OK.
 
 -spec roles_add_handler(binary(), list()) -> map().
 roles_add_handler(UserName, Roles) ->
@@ -237,6 +218,12 @@ validation_user_add(User, Cache) ->
     error = maps:find(User, Cache),
     ok.
 
+-spec validation_user_delete(binary(), map()) -> ok.
+validation_user_delete(User, Cache) ->
+    LenRole = byte_size(User),
+    {match, [{0, LenRole}]} = re:run(User, "[a-zA-Z_\\d]*", [unicode]),
+    {ok, _} = maps:find(User, Cache),
+    ok.
 
 -spec delete_users_role(binary(), map(), list()) -> ok.
 delete_users_role(_, _, []) ->
