@@ -90,24 +90,6 @@ code_change(_OldVsn, State, _Extra) ->
 % Help-functions for inverse functions
 % ====================================================
 
--spec validation_add_allow_roles(list()) -> ok.
-validation_add_allow_roles([]) ->
-    ok;
-validation_add_allow_roles([Role|RoleList]) ->
-    LenRole = byte_size(Role),
-    {match, [{0, LenRole}]} = re:run(Role, "[a-zA-Z_\\d]*", [unicode]),
-    false = is_real_roles([Role]),
-    validation_add_allow_roles(RoleList).
-
--spec validation_delete_allow_roles(list()) -> ok.
-validation_delete_allow_roles([]) ->
-    ok;
-validation_delete_allow_roles([Role|RoleList]) ->
-    LenRole = byte_size(Role),
-    {match, [{0, LenRole}]} = re:run(Role, "[a-zA-Z_\\d]*", [unicode]),
-    true = is_real_roles([Role]),
-    validation_delete_allow_roles(RoleList).
-
 -spec add_allow_roles_handler(binary()) -> map().
 add_allow_roles_handler([]) ->
     ?JSON_OK;
@@ -129,28 +111,17 @@ delete_allow_roles_handler([Role|ListRoles], Cache) ->
     delete_allow_roles_handler(ListRoles, Cache).
 
 -spec user_add_handler(binary()) -> map().
-user_add_handler(UserName) ->
-    case get_map_from_db() of
-        no_connect ->
-            ?JSON_ERROR("no connect with db");
-        {error, Error} ->
-            ?LOG_ERROR("Error in reqare db; ~p", [Error]),
-            ?JSON_ERROR("Error in reqare db");
-        Map ->
-            case maps:find(UserName, Map) of
-                {ok, _} ->
-                    ?JSON_ERROR("User '" ++ [binary_to_list(UserName)] ++ "' exist");
-                error ->
-                    Uuid = list_to_binary(uuid:to_string(simple, uuid:uuid1())),
-                    case acl_simple_pg:insert("user_add", [Uuid, UserName, jsone:encode(binary_to_list(crypto:hash(sha, <<"1234">>)))]) of
-                        {ok, _} ->
-                            Cache = Map#{UserName => []},
-                            true = ets:insert(acl_simple, [{server_cache, Cache}]),
-                            ?JSON_OK;
-                        {error, _} ->
-                            ?JSON_ERROR("error in reqare db")
-                    end
-            end
+user_add_handler(User) ->
+    [{_, Cache}] = ets:lookup(acl_simple, server_cache),
+    ok = validation_user_add(User, Cache),
+    Uuid = list_to_binary(uuid:to_string(simple, uuid:uuid1())),
+    case acl_simple_pg:insert("user_add", [Uuid, User, jsone:encode(binary_to_list(crypto:hash(sha, <<"1234">>)))]) of
+        {ok, _} ->
+            NewCache = Cache#{User => []},
+            true = ets:insert(acl_simple, [{server_cache, NewCache}]),
+            ?JSON_OK;
+        {error, _} ->
+            ?JSON_ERROR("db error")
     end.
 
 -spec user_delete_handler(binary()) -> map().
@@ -247,6 +218,32 @@ roles_delete_handler(UserName, Roles) ->
 
 
 % ====================================================
+
+-spec validation_add_allow_roles(list()) -> ok.
+validation_add_allow_roles([]) ->
+    ok;
+validation_add_allow_roles([Role|RoleList]) ->
+    LenRole = byte_size(Role),
+    {match, [{0, LenRole}]} = re:run(Role, "[a-zA-Z_\\d]*", [unicode]),
+    false = is_real_roles([Role]),
+    validation_add_allow_roles(RoleList).
+
+-spec validation_delete_allow_roles(list()) -> ok.
+validation_delete_allow_roles([]) ->
+    ok;
+validation_delete_allow_roles([Role|RoleList]) ->
+    LenRole = byte_size(Role),
+    {match, [{0, LenRole}]} = re:run(Role, "[a-zA-Z_\\d]*", [unicode]),
+    true = is_real_roles([Role]),
+    validation_delete_allow_roles(RoleList).
+
+-spec validation_user_add(binary(), map()) -> ok.
+validation_user_add(User, Cache) ->
+    LenRole = byte_size(User),
+    {match, [{0, LenRole}]} = re:run(User, "[a-zA-Z_\\d]*", [unicode]),
+    error = maps:find(User, Cache),
+    ok.
+
 
 -spec delete_users_role(binary(), map(), list()) -> ok.
 delete_users_role(_, _, []) ->
