@@ -67,7 +67,9 @@ handle_call({add_allow_roles, ListRoles}, _From, State) ->
     Reply = add_allow_roles_handler(ListRoles),
     {reply, Reply, State};
 handle_call({delete_allow_roles, ListRoles}, _From, State) ->
-    Reply = delete_allow_roles_handler(ListRoles),
+    ok = validation_delete_allow_roles(ListRoles),
+    [{_, Cache}] = ets:lookup(acl_simple, server_cache),
+    Reply = delete_allow_roles_handler(ListRoles, Cache),
     {reply, Reply, State};
 handle_call(_Msg, _From, State) ->
     {reply, unknown_req, State}.
@@ -84,23 +86,47 @@ code_change(_OldVsn, State, _Extra) ->
     {ok, State}.
 
 
-
 % ====================================================
 % Help-functions for inverse functions
 % ====================================================
+
+-spec validation_add_allow_roles(list()) -> ok.
+validation_add_allow_roles([]) ->
+    ok;
+validation_add_allow_roles([Role|RoleList]) ->
+    LenRole = byte_size(Role),
+    {match, [{0, LenRole}]} = re:run(Role, "[a-zA-Z_\\d]*", [unicode]),
+    false = is_real_roles([Role]),
+    validation_add_allow_roles(RoleList).
+
+-spec validation_delete_allow_roles(list()) -> ok.
+validation_delete_allow_roles([]) ->
+    ok;
+validation_delete_allow_roles([Role|RoleList]) ->
+    LenRole = byte_size(Role),
+    {match, [{0, LenRole}]} = re:run(Role, "[a-zA-Z_\\d]*", [unicode]),
+    true = is_real_roles([Role]),
+    validation_delete_allow_roles(RoleList).
 
 -spec add_allow_roles_handler(binary()) -> map().
 add_allow_roles_handler([]) ->
     ?JSON_OK;
 add_allow_roles_handler([Role|ListRoles]) ->
-    {ok, _} = acl_simple_pg:insert("add_allow_roles", [Role]),
+    {ok, _} = acl_simple_pg:insert("add_allow_role", [Role]),
     [{_, AllowRoles}] = ets:lookup(acl_simple, allow_roles),
     true = ets:insert(acl_simple, [{allow_roles, [Role|AllowRoles]}]),
     add_allow_roles_handler(ListRoles).
 
--spec delete_allow_roles_handler(binary()) -> map().
-delete_allow_roles_handler(_ListRoles) ->
-    #{<<"result">> => <<"develop">>}.
+-spec delete_allow_roles_handler(list(), list()) -> map().
+delete_allow_roles_handler([], _) ->
+    ?JSON_OK;
+delete_allow_roles_handler([Role|ListRoles], Cache) ->
+    UsersList = maps:keys(Cache),
+    ok = delete_users_role(Role, Cache, UsersList),
+    {ok, _} = acl_simple_pg:delete("delete_allow_role", [Role]),
+    [{_, AllowRoles}] = ets:lookup(acl_simple, allow_roles),
+    true = ets:insert(acl_simple, [{allow_roles, AllowRoles -- [Role]}]),
+    delete_allow_roles_handler(ListRoles, Cache).
 
 -spec user_add_handler(binary()) -> map().
 user_add_handler(UserName) ->
@@ -222,14 +248,21 @@ roles_delete_handler(UserName, Roles) ->
 
 % ====================================================
 
--spec validation_add_allow_roles(list()) -> ok.
-validation_add_allow_roles([]) ->
+-spec delete_users_role(binary(), map(), list()) -> ok.
+delete_users_role(_, _, []) ->
     ok;
-validation_add_allow_roles([Role|RoleList]) ->
-    LenRole = byte_size(Role),
-    {match, [{0, LenRole}]} = re:run(Role, "[a-zA-Z_\\d]*", [unicode]),
-    false = is_real_roles([Role]),
-    validation_add_allow_roles(RoleList).
+delete_users_role(Role, Cache, [User|UsersList]) ->
+    #{User := RoleList} = Cache,
+    case lists:member(Role, RoleList) of
+        false ->
+            ok;
+        true ->
+            {ok, _} = acl_simple_pg:delete("roles_delete_by_name", [User, Role]),
+            ?LOG_DEBUG("Role ~p was delete in user ~p", [Role, User]),
+            NewMap = Cache#{User := RoleList -- [Role]},
+            true = ets:insert(acl_simple, [{server_cache, NewMap}])
+    end,
+    delete_users_role(Role, Cache, UsersList).
 
 -spec is_real_roles(list()) -> true | false.
 is_real_roles(List) ->
@@ -272,6 +305,7 @@ insert_roles_in_db(UserName, RolesOld, [H | T]) ->
         true ->
             insert_roles_in_db(UserName, RolesOld, T)
     end.
+
 
 % -----------------
 
