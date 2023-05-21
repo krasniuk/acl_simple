@@ -62,18 +62,13 @@ handle_parameters({Login, PassHash}, #{<<"method">> := Method} = ParamPack) ->
 auth(Login, Hash, _Method) ->
     {ok, _, [{JsonHash}]} = acl_simple_pg:select("get_admin_passhash", [Login]),
     RealHash = jsone:decode(JsonHash),
-    case RealHash == Hash of
-        false ->
-            false;
-        true ->
-            true
-    end.
+    RealHash == Hash.
 
 -spec handle_method(binary(), map()) -> {integer(), binary()}.
 handle_method(<<"user_add">>, Map) ->
     [{_, Pid}] = ets:lookup(acl_simple, acl_simple_server),
-    NewUser = maps:get(<<"user">>, Map),
-    Reply = gen_server:call(Pid, {user_add, NewUser}),
+    #{<<"user">> := NewUser, <<"passhash">> := PassHash} = Map,
+    Reply = gen_server:call(Pid, {user_add, NewUser, PassHash}),
     {200, jsone:encode(Reply)};
 handle_method(<<"user_delete">>, Map) ->
     [{_, Pid}] = ets:lookup(acl_simple, acl_simple_server),

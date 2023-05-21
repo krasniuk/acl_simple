@@ -29,11 +29,8 @@ init([]) ->
 terminate(_, _State) ->
     ok.
 
-handle_call({user_add, UserName}, _From, State) ->
-    Reply = user_add_handler(UserName),
-    {reply, Reply, State};
-handle_call({allow_roles_add, UserName}, _From, State) ->
-    Reply = user_add_handler(UserName),
+handle_call({user_add, UserName, PassHash}, _From, State) ->
+    Reply = user_add_handler(UserName, PassHash),
     {reply, Reply, State};
 handle_call({user_delete, UserName}, _From, State) ->
     Reply = user_delete_handler(UserName),
@@ -110,19 +107,15 @@ delete_allow_roles_handler([Role|ListRoles], Cache) ->
     true = ets:insert(acl_simple, [{allow_roles, AllowRoles -- [Role]}]),
     delete_allow_roles_handler(ListRoles, Cache).
 
--spec user_add_handler(binary()) -> map().
-user_add_handler(User) ->
+-spec user_add_handler(binary(), list()) -> map().
+user_add_handler(User, PassHash) ->
     [{_, Cache}] = ets:lookup(acl_simple, server_cache),
     ok = validation_user_add(User, Cache),
     Uuid = list_to_binary(uuid:to_string(simple, uuid:uuid1())),
-    case acl_simple_pg:insert("user_add", [Uuid, User, jsone:encode(binary_to_list(crypto:hash(sha, <<"1234">>)))]) of
-        {ok, _} ->
-            NewCache = Cache#{User => []},
-            true = ets:insert(acl_simple, [{server_cache, NewCache}]),
-            ?JSON_OK;
-        {error, _} ->
-            ?JSON_ERROR("db error")
-    end.
+    % binary_to_list(crypto:hash(sha, <<"1234">>)).
+    {ok, _} = acl_simple_pg:insert("user_add", [Uuid, User, jsone:encode(PassHash)]),
+    true = ets:insert(acl_simple, [{server_cache, Cache#{User => []}}]),
+    ?JSON_OK.
 
 -spec user_delete_handler(binary()) -> map().
 user_delete_handler(UserName) ->
