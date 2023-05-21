@@ -132,7 +132,7 @@ code_change(_OldVsn, State, _Extra) ->
 parse(Conn) ->
     ?LOG_DEBUG("Parse OK", []),
     {ok, _} = epgsql:parse(Conn, "get_allow_roles", "SELECT role FROM allow_roles", []),
-
+    {ok, _} = epgsql:parse(Conn, "add_allow_roles", "INSERT INTO allow_roles (role) VALUES ($1)", [varchar]),
     {ok, _} = epgsql:parse(Conn, "user_add", "INSERT INTO users (id, name, passhash) VALUES ($1, $2, $3)", [varchar, varchar, json]),
     {ok, _} = epgsql:parse(Conn, "get_passhash", "SELECT passhash FROM users WHERE name = $1", [varchar]),
     {ok, _} = epgsql:parse(Conn, "get_admin_passhash", "SELECT passhash FROM admins WHERE login = $1", [varchar]),

@@ -63,6 +63,7 @@ handle_call({show_allow_roles}, _From, State) ->
     Reply = ?JSON_SHOW_ALLOW_ROLES(AllowRoles),
     {reply, Reply, State};
 handle_call({add_allow_roles, ListRoles}, _From, State) ->
+    ok = validation_add_allow_roles(ListRoles),
     Reply = add_allow_roles_handler(ListRoles),
     {reply, Reply, State};
 handle_call({delete_allow_roles, ListRoles}, _From, State) ->
@@ -88,9 +89,16 @@ code_change(_OldVsn, State, _Extra) ->
 % Help-functions for inverse functions
 % ====================================================
 
-add_allow_roles_handler(_ListRoles) ->
-    #{<<"result">> => <<"develop">>}.
+-spec add_allow_roles_handler(binary()) -> map().
+add_allow_roles_handler([]) ->
+    ?JSON_OK;
+add_allow_roles_handler([Role|ListRoles]) ->
+    {ok, _} = acl_simple_pg:insert("add_allow_roles", [Role]),
+    [{_, AllowRoles}] = ets:lookup(acl_simple, allow_roles),
+    true = ets:insert(acl_simple, [{allow_roles, [Role|AllowRoles]}]),
+    add_allow_roles_handler(ListRoles).
 
+-spec delete_allow_roles_handler(binary()) -> map().
 delete_allow_roles_handler(_ListRoles) ->
     #{<<"result">> => <<"develop">>}.
 
@@ -214,17 +222,27 @@ roles_delete_handler(UserName, Roles) ->
 
 % ====================================================
 
+-spec validation_add_allow_roles(list()) -> ok.
+validation_add_allow_roles([]) ->
+    ok;
+validation_add_allow_roles([Role|RoleList]) ->
+    LenRole = byte_size(Role),
+    {match, [{0, LenRole}]} = re:run(Role, "[a-zA-Z_\\d]*", [unicode]),
+    false = is_real_roles([Role]),
+    validation_add_allow_roles(RoleList).
+
 -spec is_real_roles(list()) -> true | false.
 is_real_roles(List) ->
     [{_, AllowRoles}] = ets:lookup(acl_simple, allow_roles),
     is_real_roles(AllowRoles, List).
 
 -spec is_real_roles(list(), list()) -> true | false.
-is_real_roles(_, []) -> true;
-is_real_roles(AllowRoles, [H | T]) ->
+is_real_roles(_, []) ->
+    true;
+is_real_roles(AllowRoles, [H|T]) ->
     case lists:member(H, AllowRoles) of
         true ->
-            is_real_roles(T);
+            is_real_roles(AllowRoles, T);
         false ->
             false
     end.

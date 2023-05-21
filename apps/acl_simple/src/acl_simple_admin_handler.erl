@@ -22,9 +22,9 @@ handle_post(Method, _, Req) ->
 
 handle_req(Req) ->
     {ok, Body, _Req} = cowboy_req:read_body(Req),
-    ?LOG_DEBUG("Post request ~p~n", [Body]),
+    ?LOG_DEBUG("Post request ~p", [Body]),
     {Status, Json} = handle_body(Body),
-    ?LOG_DEBUG("Post reply ~p~n", [Status]),
+    ?LOG_DEBUG("Post reply ~p~n----- ----- -----~n", [Json]),
     cowboy_req:reply(Status, #{<<"content-type">> => <<"application/json; charset=UTF-8">>}, Json, Req).
 
 handle_body(Body) ->
@@ -32,11 +32,8 @@ handle_body(Body) ->
         Map ->
             handle_package(Map)
     catch
-        exit:{timeout, Other} ->
-            ?LOG_ERROR("server overloaded (exit : {timeout, ~p})", [Other]),
-            {503, #{}};
         Exception:Reason ->
-            ?LOG_ERROR("400; invalid syntax of json (~p : ~p)", [Exception, Reason]),
+            ?LOG_ERROR("jsone:decode error (~p : ~p)", [Exception, Reason]),
             {206, jsone:encode(#{<<"fail">> => <<"Invalid request format">>})}
     end.
 
@@ -47,8 +44,8 @@ handle_package(Map) ->
         #{<<"parameters">> := ParamPack} = Map,
         handle_parameters({Login, PassHash}, ParamPack)
     catch
-        _Class:Reason ->
-            ?LOG_ERROR("Parse map error ~p Reason ~p~n", [Map, Reason]),
+        Class:Reason ->
+            ?LOG_ERROR("Reason (~p : ~p)", [Class, Reason]),
             {206, jsone:encode(#{<<"fail">> => <<"Invalid request format">>})}
     end.
 
