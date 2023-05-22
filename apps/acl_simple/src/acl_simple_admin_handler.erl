@@ -45,7 +45,7 @@ handle_package(Map) ->
         handle_parameters({Login, PassHash}, ParamPack)
     catch
         Class:Reason ->
-            ?LOG_ERROR("Reason (~p : ~p)", [Class, Reason]),
+            ?LOG_ERROR("Catch error (~p : ~p)", [Class, Reason]),
             {206, jsone:encode(#{<<"fail">> => <<"Invalid request format">>})}
     end.
 

@@ -24,7 +24,7 @@ init([]) ->
     {ok, PauseTime} = application:get_env(acl_simple, timer_cache),
     {ok, PauseAllowRoles} = application:get_env(acl_simple, timer_allow_roles),
     TCache = erlang:send_after(200, self(), {timer_cache, PauseTime}),
-    TAllowRoles = erlang:send_after(200, self(), {timer_allow_roles, PauseAllowRoles}),
+    TAllowRoles = erlang:send_after(205, self(), {timer_allow_roles, PauseAllowRoles}),
     {ok, #{timer_cache => TCache,
            timer_allow_roles => TAllowRoles}}.
 
@@ -39,8 +39,8 @@ handle_cast(_Data, State) ->
 
 handle_info({timer_cache, PauseTime}, #{timer_cache := T} = State) ->
     _ = erlang:cancel_timer(T),
-    Timer = case get_map_from_db() of
-                no_connect ->
+    Timer = case timer_cache_handler() of
+                {error, _} ->
                     erlang:send_after(200, self(), {timer_cache, PauseTime});
                 Map ->
                     true = ets:insert(acl_simple, [{server_cache, Map}]),
@@ -50,7 +50,7 @@ handle_info({timer_cache, PauseTime}, #{timer_cache := T} = State) ->
 handle_info({timer_allow_roles, PauseTime}, #{timer_allow_roles := T} = State) ->
     _ = erlang:cancel_timer(T),
     Timer = case allow_roles_handler() of
-                no_connect ->
+                {error, _} ->
                     erlang:send_after(200, self(), {timer_allow_roles, PauseTime});
                 List ->
                     true = ets:insert(acl_simple, [{allow_roles, List}]),
@@ -65,35 +65,38 @@ handle_info(_Data, State) ->
 % Help-functions for inverse functions
 % ====================================================
 
--spec allow_roles_handler() -> list().
+-spec allow_roles_handler() -> list() | {error, any()}.
 allow_roles_handler() ->
     case acl_simple_pg:select("get_allow_roles", []) of
-        no_connect ->
-            no_connect;
+        {error, Error} ->
+            {error, Error};
         {ok, _, AllowRoles} ->
-            %?LOG_INFO("AllowRoles = ~p", [AllowRoles]),
             handler_convert_to_map(AllowRoles)
     end.
 
-get_map_from_db() ->
+-spec timer_cache_handler() -> {error, any()} | map().
+timer_cache_handler() ->
     case acl_simple_pg:select("get_all_users", []) of
-        no_connect -> no_connect;
+        {error, Error} ->
+            {error, Error};
         {ok, _, Users} ->
-            Map = convert_to_map(Users, #{}),
-            Map
+            convert_to_map(Users, #{})
     end.
 
-convert_to_map([], Map) -> Map;
-convert_to_map([{Name} | T], Map0) ->
+-spec convert_to_map(list(), #{}) -> map().
+convert_to_map([], Map) ->
+    Map;
+convert_to_map([{Name} | T], Map) ->
     {ok, _, RolesList_Dirty} = acl_simple_pg:select("get_roles_by_name", [Name]),
     RolesList = handler_convert_to_map(RolesList_Dirty),
-    Map = Map0#{Name => RolesList},
-    convert_to_map(T, Map).
+    Map1 = Map#{Name => RolesList},
+    convert_to_map(T, Map1).
 
 
 %% ------------------------------------------
 
 -spec handler_convert_to_map(list()) -> list().
-handler_convert_to_map([]) -> [];
+handler_convert_to_map([]) ->
+    [];
 handler_convert_to_map([{Role} | T]) ->
     [Role | handler_convert_to_map(T)].

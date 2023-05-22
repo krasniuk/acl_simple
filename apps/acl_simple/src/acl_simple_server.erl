@@ -111,6 +111,7 @@ delete_allow_roles_handler([Role|ListRoles]) ->
 user_add_handler(User, PassHash) ->
     [{_, Cache}] = ets:lookup(acl_simple, server_cache),
     ok = validation_user_add(User, Cache),
+    ok = validation_passhash(PassHash),
     Uuid = list_to_binary(uuid:to_string(simple, uuid:uuid1())),
     % binary_to_list(crypto:hash(sha, <<"1234">>)).
     {ok, _} = acl_simple_pg:insert("user_add", [Uuid, User, jsone:encode(PassHash)]),
@@ -195,6 +196,12 @@ validation_user(User, Cache) ->
     {ok, _} = maps:find(User, Cache),
     ok.
 
+-spec validation_passhash(list()) -> ok.
+validation_passhash(PassHash) ->
+    20 = length(PassHash),
+    PassHash = lists:map(fun(Num) -> true = Num > 0, true = Num < 256, Num end, PassHash),
+    ok.
+
 
 -spec delete_users_role(binary(), map(), list()) -> ok.
 delete_users_role(_, _, []) ->
@@ -214,11 +221,11 @@ delete_users_role(Role, Cache, [User|UsersList]) ->
 
 -spec delete_roles_in_db(list(), binary()) -> ok | {error, any()}.
 delete_roles_in_db([], _) -> ok;
-delete_roles_in_db([Role|T], Name) ->
-    case acl_simple_pg:delete("roles_delete_by_name", [Name, Role]) of
+delete_roles_in_db([Role|T], User) ->
+    case acl_simple_pg:delete("roles_delete_by_name", [User, Role]) of
         {ok, _} ->
             ?LOG_DEBUG("Role ~p was delete in user ~p", [Role, User]),
-            delete_roles_in_db(T, Name);
+            delete_roles_in_db(T, User);
         {error, Error} ->
             ?LOG_ERROR("db error ~p", [Error]),
             {error, Error}

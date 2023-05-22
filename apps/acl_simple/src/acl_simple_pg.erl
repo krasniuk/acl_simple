@@ -18,18 +18,35 @@ start_link(Args) ->
 select(Statement, Args) ->
     case poolboy:checkout(pg_pool) of
         full ->
-            ?LOG_ERROR("All workers are busy. Pool(~p)", [Pool]),
+            ?LOG_ERROR("All workers are busy. Pool(~p)", [pg_pool]),
             error;
         WorkerPid ->
-            gen_server:call(WorkerPid, {select, Statement, Args}),
-            ok = poolboy:checkin(pg_pool, WorkerPid)
+            Reply = gen_server:call(WorkerPid, {select, Statement, Args}),
+            ok = poolboy:checkin(pg_pool, WorkerPid),
+            Reply
     end.
 
 insert(Statement, Args) ->
-    select(Statement, Args).
+    case poolboy:checkout(pg_pool) of
+        full ->
+            ?LOG_ERROR("All workers are busy. Pool(~p)", [pg_pool]),
+            error;
+        WorkerPid ->
+            Reply = gen_server:call(WorkerPid, {insert, Statement, Args}),
+            ok = poolboy:checkin(pg_pool, WorkerPid),
+            Reply
+    end.
 
 delete(Statement, Args) ->
-    select(Statement, Args).
+    case poolboy:checkout(pg_pool) of
+        full ->
+            ?LOG_ERROR("All workers are busy. Pool(~p)", [pg_pool]),
+            error;
+        WorkerPid ->
+            Reply = gen_server:call(WorkerPid, {delete, Statement, Args}),
+            ok = poolboy:checkin(pg_pool, WorkerPid),
+            Reply
+    end.
 
 
 % ====================================================
@@ -55,13 +72,9 @@ handle_call({select, Statement, Args}, _From, State) ->
 handle_call({delete, Statement, Args}, _From, State) ->
     Conn = proplists:get_value(connection, State),
     Reply = send_to_bd(Conn, Statement, Args),
-    {reply, Reply, State};
-handle_call(Data, _From, State) ->
-    ?LOG_INFO("-> (call) unknown_req: ~p", [Data]),
-    {reply, {unknown_req, Data}, State}.
+    {reply, Reply, State}.
 
 handle_cast(Data, State) ->
-    ok = io:format("~n~w -> (cast) grt reqaure: ~p", [self(), Data]),
     {noreply, State}.
 
 handle_info(connect, State) -> % initialization
