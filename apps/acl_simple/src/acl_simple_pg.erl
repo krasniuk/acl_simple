@@ -19,7 +19,7 @@ select(Statement, Args) ->
     case poolboy:checkout(pg_pool) of
         full ->
             ?LOG_ERROR("All workers are busy. Pool(~p)", [pg_pool]),
-            error;
+            {error, full_pool};
         WorkerPid ->
             Reply = gen_server:call(WorkerPid, {select, Statement, Args}),
             ok = poolboy:checkin(pg_pool, WorkerPid),
@@ -30,7 +30,7 @@ insert(Statement, Args) ->
     case poolboy:checkout(pg_pool) of
         full ->
             ?LOG_ERROR("All workers are busy. Pool(~p)", [pg_pool]),
-            error;
+            {error, full_pool};
         WorkerPid ->
             Reply = gen_server:call(WorkerPid, {insert, Statement, Args}),
             ok = poolboy:checkin(pg_pool, WorkerPid),
@@ -41,7 +41,7 @@ delete(Statement, Args) ->
     case poolboy:checkout(pg_pool) of
         full ->
             ?LOG_ERROR("All workers are busy. Pool(~p)", [pg_pool]),
-            error;
+            {error, full_pool};
         WorkerPid ->
             Reply = gen_server:call(WorkerPid, {delete, Statement, Args}),
             ok = poolboy:checkin(pg_pool, WorkerPid),
@@ -54,41 +54,44 @@ delete(Statement, Args) ->
 % ====================================================
 
 init(Args) ->
-    self() ! connect,
-    State = Args,
-    {ok, State}.
+    TConn = erlang:send_after(10, self(), connect),
+    {ok, #{connect_arg => Args,
+        timer_connect => TConn,
+        connection => undefined}}.
 
 terminate(_, _State) ->
     ok.
 
 handle_call({insert, Statement, Args}, _From, State) ->
-    Conn = proplists:get_value(connection, State),
+    #{connection := Conn} = State,
     Reply = send_to_bd(Conn, Statement, Args),
     {reply, Reply, State};
 handle_call({select, Statement, Args}, _From, State) ->
-    Conn = proplists:get_value(connection, State),
+    #{connection := Conn} = State,
     Reply = send_to_bd(Conn, Statement, Args),
     {reply, Reply, State};
 handle_call({delete, Statement, Args}, _From, State) ->
-    Conn = proplists:get_value(connection, State),
+    #{connection := Conn} = State,
     Reply = send_to_bd(Conn, Statement, Args),
     {reply, Reply, State}.
 
-handle_cast(Data, State) ->
+handle_cast(_Data, State) ->
     {noreply, State}.
 
 handle_info(connect, State) -> % initialization
-    Arg = proplists:delete(connection, State),
-    Conn = case epgsql:connect(Arg) of
+    #{connect_arg := Arg, timer_connect := TConn} = State,
+    _ = erlang:cancel_timer(TConn),
+    State1 = case epgsql:connect(Arg) of
                {ok, Pid} ->
                    ok = parse(Pid),
-                   Pid;
-               {error, _} ->
-                   ok = timer:sleep(1000),
-                   self() ! connect,
-                   undefined
+                   State#{connection := Pid};
+               {error, _Error} ->
+                  % ?LOG_ERROR("db connect error ~p", [Error]),
+                 %  ok = timer:sleep(1000),
+                   TConn1 = erlang:send_after(500, self(), connect),
+                   State#{connection := undefined, timer_connect := TConn1}
            end,
-    {noreply, [{connection, Conn} | State]};
+    {noreply, State1};
 handle_info(_Data, State) ->
     {noreply, State}.
 
@@ -101,7 +104,7 @@ code_change(_OldVsn, State, _Extra) ->
 % ====================================================
 
 parse(Conn) ->
-    ?LOG_DEBUG("Parse OK", []),
+    ?LOG_INFO("Parse OK", []),
     {ok, _} = epgsql:parse(Conn, "get_allow_roles", "SELECT role FROM allow_roles", []),
     {ok, _} = epgsql:parse(Conn, "add_allow_role", "INSERT INTO allow_roles (role) VALUES ($1)", [varchar]),
     {ok, _} = epgsql:parse(Conn, "delete_allow_role", "DELETE FROM allow_roles WHERE role = $1", [varchar]),
@@ -115,6 +118,8 @@ parse(Conn) ->
     {ok, _} = epgsql:parse(Conn, "roles_delete_by_name", "DELETE FROM roles WHERE user_id = (SELECT id FROM users WHERE name = $1) AND role = $2", [varchar, varchar]),
     ok.
 
+send_to_bd(undefined, _, _) ->
+    {error, no_connect};
 send_to_bd(Conn, Statement, Args) -> % INTERFACE between prepared_query of DB, and handle_call...
     case epgsql:prepared_query(Conn, Statement, Args) of
         {error, Error} ->

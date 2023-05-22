@@ -26,7 +26,8 @@ init([]) ->
     TCache = erlang:send_after(200, self(), {timer_cache, PauseTime}),
     TAllowRoles = erlang:send_after(205, self(), {timer_allow_roles, PauseAllowRoles}),
     {ok, #{timer_cache => TCache,
-           timer_allow_roles => TAllowRoles}}.
+           timer_allow_roles => TAllowRoles
+    }}.
 
 terminate(_, _State) ->
     ok.
@@ -41,7 +42,7 @@ handle_info({timer_cache, PauseTime}, #{timer_cache := T} = State) ->
     _ = erlang:cancel_timer(T),
     Timer = case timer_cache_handler() of
                 {error, _} ->
-                    erlang:send_after(200, self(), {timer_cache, PauseTime});
+                    erlang:send_after(2000, self(), {timer_cache, PauseTime});
                 Map ->
                     true = ets:insert(acl_simple, [{server_cache, Map}]),
                     erlang:send_after(PauseTime, self(), {timer_cache, PauseTime})
@@ -51,7 +52,7 @@ handle_info({timer_allow_roles, PauseTime}, #{timer_allow_roles := T} = State) -
     _ = erlang:cancel_timer(T),
     Timer = case allow_roles_handler() of
                 {error, _} ->
-                    erlang:send_after(200, self(), {timer_allow_roles, PauseTime});
+                    erlang:send_after(2000, self(), {timer_allow_roles, PauseTime});
                 List ->
                     true = ets:insert(acl_simple, [{allow_roles, List}]),
                     erlang:send_after(PauseTime, self(), {timer_allow_roles, PauseTime})
