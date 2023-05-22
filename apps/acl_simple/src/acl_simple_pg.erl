@@ -4,66 +4,32 @@
 
 -include("acl_simple.hrl").
 
+-export([start_link/1]). % Export for poolboy
+-export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3]). % Export for gen_server
 -export([select/2, insert/2, delete/2]).
-
-% Export for poolboy
--export([start_link/1]).
-
-% Export for gen_server
--export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3]).
 
 % ====================================================
 % Clients functions
 % ====================================================
 
-start_link(Args) -> % Exports for boolboy
+start_link(Args) ->
     gen_server:start_link(?MODULE, Args, []).
 
 select(Statement, Args) ->
-    WorkerPid = get_worker_of_pool(pg_pool),
-    Return = case check_connect(WorkerPid) of
-                 no_connect ->
-                     no_connect;
-                 ok ->
-                     gen_server:call(WorkerPid, {select, Statement, Args})
-             end,
-    ok = poolboy:checkin(pg_pool, WorkerPid),
-    Return.
+    case poolboy:checkout(pg_pool) of
+        full ->
+            ?LOG_ERROR("All workers are busy. Pool(~p)", [Pool]),
+            error;
+        WorkerPid ->
+            gen_server:call(WorkerPid, {select, Statement, Args}),
+            ok = poolboy:checkin(pg_pool, WorkerPid)
+    end.
 
 insert(Statement, Args) ->
-    WorkerPid = get_worker_of_pool(pg_pool),
-    Return = case check_connect(WorkerPid) of
-                 no_connect -> no_connect;
-                 ok ->
-                     gen_server:call(WorkerPid, {insert, Statement, Args})
-             end,
-    ok = poolboy:checkin(pg_pool, WorkerPid),
-    Return.
+    select(Statement, Args).
 
 delete(Statement, Args) ->
-    WorkerPid = get_worker_of_pool(pg_pool),
-    Return = case check_connect(WorkerPid) of
-                 no_connect -> no_connect;
-                 ok ->
-                     gen_server:call(WorkerPid, {delete, Statement, Args})
-             end,
-    ok = poolboy:checkin(pg_pool, WorkerPid),
-    Return.
-
-%------ help -------
-
-check_connect(WorkerPid) ->
-    WorkerPid ! {is_connect, self()},
-    receive
-        ok ->
-            ok;
-        no_connect ->
-            ?LOG_ERROR("no connect with db", []),
-            no_connect
-    after 500 ->
-        ?LOG_ERROR("no connect with db", []),
-        no_connect
-    end.
+    select(Statement, Args).
 
 
 % ====================================================
@@ -77,7 +43,6 @@ init(Args) ->
 
 terminate(_, _State) ->
     ok.
-
 
 handle_call({insert, Statement, Args}, _From, State) ->
     Conn = proplists:get_value(connection, State),
@@ -99,13 +64,6 @@ handle_cast(Data, State) ->
     ok = io:format("~n~w -> (cast) grt reqaure: ~p", [self(), Data]),
     {noreply, State}.
 
-handle_info({is_connect, Pid}, State) -> % check connect on client size
-    Conn = proplists:get_value(connection, State),
-    case Conn of
-        undefined -> Pid ! no_connect;
-        _ -> Pid ! ok
-    end,
-    {noreply, State};
 handle_info(connect, State) -> % initialization
     Arg = proplists:delete(connection, State),
     Conn = case epgsql:connect(Arg) of
@@ -151,15 +109,3 @@ send_to_bd(Conn, Statement, Args) -> % INTERFACE between prepared_query of DB, a
             {error, Error};
         Other -> Other
     end.
-
-% ---- HANDLERS USER ----
-get_worker_of_pool(Pool) ->
-    ClonePid = poolboy:checkout(Pool),
-    case ClonePid of
-        full ->
-            ?LOG_ERROR("All workers are busy. Pool(~p)", [Pool]),
-            error;
-        ClonePid ->
-            ClonePid
-    end.
-

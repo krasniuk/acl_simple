@@ -214,9 +214,10 @@ delete_users_role(Role, Cache, [User|UsersList]) ->
 
 -spec delete_roles_in_db(list(), binary()) -> ok | {error, any()}.
 delete_roles_in_db([], _) -> ok;
-delete_roles_in_db([H | T], Name) ->
-    case acl_simple_pg:delete("roles_delete_by_name", [Name, H]) of
+delete_roles_in_db([Role|T], Name) ->
+    case acl_simple_pg:delete("roles_delete_by_name", [Name, Role]) of
         {ok, _} ->
+            ?LOG_DEBUG("Role ~p was delete in user ~p", [Role, User]),
             delete_roles_in_db(T, Name);
         {error, Error} ->
             ?LOG_ERROR("db error ~p", [Error]),
