@@ -7,10 +7,8 @@
 -export([all/0, init_per_suite/1, end_per_suite/1, groups/0]).
 
 -export([missing_body/1, bad_http_method/1, parse_body_fail/1]).
--export([]).
--export([]).
 
--define(URL, "http://127.0.0.1:1913/").
+-define(URL_ADMIN, "http://127.0.0.1:1913/admin").
 -define(HEADERS, [{"Content-type", "application/json;charset=UTF-8"}]).
 
 
@@ -19,8 +17,8 @@
 %% ==================================
 
 init_per_suite(Config) ->
-    ok = application:set_env(?START_ENV),
-    ok = acl_simple:start(),
+  %  ok = application:set_env(?START_ENV),
+ %   ok = acl_simple:start(),
     Config.
 
 groups() ->
@@ -44,18 +42,18 @@ all() ->
 %% =================================================
 
 missing_body(_Config) ->
-    {ok, {{_, 400, _}, _Headers, RespBody}} = httpc:request(post, {?URL, ?HEADERS, "application/json;charset=UTF-8", ""},
+    {ok, {{_, 400, _}, _Headers, RespBody}} = httpc:request(post, {?URL_ADMIN, ?HEADERS, "application/json;charset=UTF-8", ""},
         [{timeout, 4000}], [{body_format, binary}]),
     ok = ct:pal("RespBody = ~p", [RespBody]),
     <<"Missing body.">> = RespBody.
 
 bad_http_method(_Config) ->
-    {ok, {{_, 405, _}, _Headers, []}} = httpc:request(get, {?URL, []}, [{timeout, 4000}], []).
+    {ok, {{_, 405, _}, _Headers, []}} = httpc:request(get, {?URL_ADMIN, []}, [{timeout, 4000}], []).
 
 parse_body_fail(_Config) ->
     ReqBody = "{\"parameters\":{\"method\":\"show_allow_roles\"",
-    {ok, {{_, 400, _}, _Headers, RespBody}} = httpc:request(post, {?URL, ?HEADERS, "application/json;charset=UTF-8", ReqBody},
+    {ok, {{_, 206, _}, _Headers, RespBody}} = httpc:request(post, {?URL_ADMIN, ?HEADERS, "application/json;charset=UTF-8", ReqBody},
         [{timeout, 4000}], [{body_format, binary}]),
     ok = ct:pal("RespBody = ~p", [RespBody]),
-    <<"invalid syntax of json">> = RespBody.
+    #{<<"fail">> := <<"Invalid request format">>} = jsone:decode(RespBody).
 

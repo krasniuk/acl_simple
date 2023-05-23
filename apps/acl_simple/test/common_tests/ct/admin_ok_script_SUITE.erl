@@ -44,7 +44,7 @@ init_per_suite(Config) ->
     Config.
 
 end_per_suite(Config) ->
-    ok = acl_simple:stop(),
+   % ok = acl_simple:stop(),
     Config.
 
 groups() ->
