@@ -105,6 +105,7 @@ code_change(_OldVsn, State, _Extra) ->
 
 parse(Conn) ->
     ?LOG_INFO("Parse OK", []),
+    {ok, _} = epgsql:parse(Conn, "delete_allow_role_in_roles", "DELETE FROM roles WHERE role = $1", [varchar]),
     {ok, _} = epgsql:parse(Conn, "get_allow_roles", "SELECT role FROM allow_roles", []),
     {ok, _} = epgsql:parse(Conn, "add_allow_role", "INSERT INTO allow_roles (role) VALUES ($1)", [varchar]),
     {ok, _} = epgsql:parse(Conn, "delete_allow_role", "DELETE FROM allow_roles WHERE role = $1", [varchar]),

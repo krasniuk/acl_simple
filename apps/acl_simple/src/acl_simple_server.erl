@@ -106,11 +106,10 @@ add_allow_roles_handler([Role|ListRoles]) ->
 delete_allow_roles_handler([]) ->
     ?JSON_OK;
 delete_allow_roles_handler([Role|ListRoles]) ->
-    [{_, Cache}] = ets:lookup(acl_simple, server_cache),
     [{_, AllowRoles}] = ets:lookup(acl_simple, allow_roles),
-    UsersList = maps:keys(Cache),
-    ok = delete_users_role(Role, Cache, UsersList),
+    {ok, _} = acl_simple_pg:delete("delete_allow_role_in_roles", [Role]),
     {ok, _} = acl_simple_pg:delete("delete_allow_role", [Role]),
+    ok = acl_simple_timer_cache:refresh_cache(),
     true = ets:insert(acl_simple, [{allow_roles, AllowRoles -- [Role]}]),
     delete_allow_roles_handler(ListRoles).
 
@@ -209,21 +208,6 @@ validation_passhash(PassHash) ->
     ok.
 
 
--spec delete_users_role(binary(), map(), list()) -> ok.
-delete_users_role(_, _, []) ->
-    ok;
-delete_users_role(Role, Cache, [User|UsersList]) ->
-    #{User := RoleList} = Cache,
-    case lists:member(Role, RoleList) of
-        false ->
-            ok;
-        true ->
-            {ok, _} = acl_simple_pg:delete("roles_delete_by_name", [User, Role]),
-            ?LOG_DEBUG("Role ~p was delete in user ~p", [Role, User]),
-            NewMap = Cache#{User := RoleList -- [Role]},
-            true = ets:insert(acl_simple, [{server_cache, NewMap}])
-    end,
-    delete_users_role(Role, Cache, UsersList).
 
 -spec delete_roles_in_db(list(), binary()) -> ok | {error, any()}.
 delete_roles_in_db([], _) -> ok;

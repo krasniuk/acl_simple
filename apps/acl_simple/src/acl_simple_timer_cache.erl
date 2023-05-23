@@ -6,7 +6,7 @@
 
 -export([start_link/0]).
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3]).
-
+-export([refresh_cache/0]).
 
 % ====================================================
 % Users functions
@@ -15,12 +15,18 @@
 start_link() ->
     gen_server:start_link(?MODULE, [], []).
 
+refresh_cache() ->
+    [{_, Pid}] = ets:lookup(acl_simple, acl_simple_timer_cache),
+    _Timer = erlang:send_after(10, Pid, refresh_cache),
+    ok.
+
 
 % ====================================================
 % Inverse functions
 % ====================================================
 
 init([]) ->
+    true = ets:insert(acl_simple, [{acl_simple_timer_cache, self()}]),
     {ok, PauseTime} = application:get_env(acl_simple, timer_cache),
     {ok, PauseAllowRoles} = application:get_env(acl_simple, timer_allow_roles),
     TCache = erlang:send_after(200, self(), {timer_cache, PauseTime}),
@@ -58,6 +64,12 @@ handle_info({timer_allow_roles, PauseTime}, #{timer_allow_roles := T} = State) -
                     erlang:send_after(PauseTime, self(), {timer_allow_roles, PauseTime})
             end,
     {noreply, State#{timer_allow_roles := Timer}};
+handle_info(refresh_cache, State) ->
+    Cache = timer_cache_handler(),
+    true = ets:insert(acl_simple, [{server_cache, Cache}]),
+    AllowRoles = allow_roles_handler(),
+    true = ets:insert(acl_simple, [{allow_roles, AllowRoles}]),
+    {noreply, State};
 handle_info(_Data, State) ->
     {noreply, State}.
 

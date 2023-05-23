@@ -4,8 +4,8 @@
     [
         {acl_simple, [
             {listen_port, 1913},
-            {timer_cache, 2000},
-            {timer_allow_roles, 4000}
+            {timer_cache, 10000},
+            {timer_allow_roles, 90000}
         ]},
         {poolboy, [
             {pools, [
