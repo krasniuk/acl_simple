@@ -1,4 +1,4 @@
--module(test_fail_SUITE).
+-module(admin_fail_SUITE).
 -author('Mykhailo Krasniuk <mykhailo.krasniuk@privatbank.ua>').
 
 -include_lit("common_test/include/ct.hrl").

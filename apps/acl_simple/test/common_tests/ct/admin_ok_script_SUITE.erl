@@ -5,7 +5,7 @@
 -include("include/sys_config.hrl").
 
 -export([all/0, init_per_suite/1, end_per_suite/1, groups/0]).
--export([compile_pause/1, test_script/1]).
+-export([compile_pause/1, test_script/1, show_allow_roles/1]).
 
 -define(URL_ADMIN, "http://127.0.0.1:1913/admin").
 -define(HEADERS, [{"Content-type", "application/json;charset=UTF-8"}]).
@@ -32,7 +32,8 @@ groups() ->
 all() ->
     [
         {group, pause},
-        test_script
+        test_script,
+        show_allow_roles
     ].
 
 
@@ -87,9 +88,23 @@ test_script(_Config) ->
     Users2 = request(show_all_users, {}),
     false = lists:member(<<"mike_test">>, Users2).
 
+show_allow_roles(_Config) ->
+    AllowRoles = request(show_allow_roles, {}),
+    ok = request(add_allow_roles, {[<<"r1913">>, <<"w1913">>, <<"e1913">>]}),
+    AllowRoles1 = request(show_allow_roles, {}),
+    true = lists:member(<<"r1913">>, AllowRoles1),
+    true = lists:member(<<"w1913">>, AllowRoles1),
+    true = lists:member(<<"e1913">>, AllowRoles1),
+    ok = request(delete_allow_roles, {[<<"r1913">>, <<"w1913">>, <<"e1913">>, hd(AllowRoles)]}),
+    AllowRoles2 = request(show_allow_roles, {}),
+    false = lists:member(hd(AllowRoles), AllowRoles2),
+    ok = request(add_allow_roles, {[hd(AllowRoles)]}),
+    AllowRoles = request(show_allow_roles, {}).
+
 
 % -----------------------------------
 
+-spec request(atom(), tuple()) -> ok | list().
 request(show_allow_roles, {}) ->
     Body = #{<<"auth">> => #{<<"login">> => <<"admin">>, <<"passhash">> => binary_to_list(crypto:hash(sha, <<"1234">>))},
         <<"parameters">> => #{<<"method">> => <<"show_allow_roles">>}},
@@ -100,6 +115,24 @@ request(show_allow_roles, {}) ->
     #{<<"result">> := <<"ok">>,
         <<"roles">> := AllowRoles} = jsone:decode(RespBody),
     AllowRoles;
+request(add_allow_roles, {Roles}) ->
+    Body = #{<<"auth">> => #{<<"login">> => <<"admin">>, <<"passhash">> => binary_to_list(crypto:hash(sha, <<"1234">>))},
+        <<"parameters">> => #{<<"method">> => <<"add_allow_roles">>, <<"roles">> => Roles}},
+    ReqBody = jsone:encode(Body),
+    {ok, {_, _, RespBody}} = httpc:request(post, {?URL_ADMIN, ?HEADERS, "application/json;charset=UTF-8", ReqBody},
+        [{timeout, 4000}], [{body_format, binary}]),
+    ok = ct:pal("show_allow_roles ~n RespBody = ~p", [RespBody]),
+    #{<<"result">> := <<"ok">>} = jsone:decode(RespBody),
+    ok;
+request(delete_allow_roles, {Roles}) ->
+    Body = #{<<"auth">> => #{<<"login">> => <<"admin">>, <<"passhash">> => binary_to_list(crypto:hash(sha, <<"1234">>))},
+        <<"parameters">> => #{<<"method">> => <<"delete_allow_roles">>, <<"roles">> => Roles}},
+    ReqBody = jsone:encode(Body),
+    {ok, {_, _, RespBody}} = httpc:request(post, {?URL_ADMIN, ?HEADERS, "application/json;charset=UTF-8", ReqBody},
+        [{timeout, 4000}], [{body_format, binary}]),
+    ok = ct:pal("show_allow_roles ~n RespBody = ~p", [RespBody]),
+    #{<<"result">> := <<"ok">>} = jsone:decode(RespBody),
+    ok;
 
 request(user_add, {User, PassHash}) ->
     Body = #{<<"auth">> => #{<<"login">> => <<"admin">>,
