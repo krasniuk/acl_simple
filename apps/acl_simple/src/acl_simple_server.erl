@@ -60,9 +60,13 @@ handle_call({show_allow_roles}, _From, State) ->
     Reply = ?JSON_SHOW_ALLOW_ROLES(AllowRoles),
     {reply, Reply, State};
 handle_call({add_allow_roles, ListRoles}, _From, State) ->
+    [{_, AllowRoles}] = ets:lookup(acl_simple, allow_roles),
+    ok = validation_add_allow_roles(ListRoles, AllowRoles),
     Reply = add_allow_roles_handler(ListRoles),
     {reply, Reply, State};
 handle_call({delete_allow_roles, ListRoles}, _From, State) ->
+    [{_, AllowRoles}] = ets:lookup(acl_simple, allow_roles),
+    ok = validation_roles(ListRoles, AllowRoles),
     Reply = delete_allow_roles_handler(ListRoles),
     {reply, Reply, State};
 handle_call(_Msg, _From, State) ->
@@ -89,10 +93,14 @@ add_allow_roles_handler([]) ->
     ?JSON_OK;
 add_allow_roles_handler([Role|ListRoles]) ->
     [{_, AllowRoles}] = ets:lookup(acl_simple, allow_roles),
-    ok = validation_add_allow_roles(ListRoles, AllowRoles),
-    {ok, _} = acl_simple_pg:insert("add_allow_role", [Role]),
-    true = ets:insert(acl_simple, [{allow_roles, [Role|AllowRoles]}]),
-    add_allow_roles_handler(ListRoles).
+    case lists:member(Role, AllowRoles) of
+        true ->
+            add_allow_roles_handler(ListRoles);
+        false ->
+            {ok, _} = acl_simple_pg:insert("add_allow_role", [Role]),
+            true = ets:insert(acl_simple, [{allow_roles, [Role|AllowRoles]}]),
+            add_allow_roles_handler(ListRoles)
+    end.
 
 -spec delete_allow_roles_handler(list()) -> map().
 delete_allow_roles_handler([]) ->
@@ -100,7 +108,6 @@ delete_allow_roles_handler([]) ->
 delete_allow_roles_handler([Role|ListRoles]) ->
     [{_, Cache}] = ets:lookup(acl_simple, server_cache),
     [{_, AllowRoles}] = ets:lookup(acl_simple, allow_roles),
-    ok = validation_roles(ListRoles, AllowRoles),
     UsersList = maps:keys(Cache),
     ok = delete_users_role(Role, Cache, UsersList),
     {ok, _} = acl_simple_pg:delete("delete_allow_role", [Role]),
@@ -170,7 +177,6 @@ validation_add_allow_roles([], _) ->
 validation_add_allow_roles([Role|RoleList], AllowRoles) ->
     LenRole = byte_size(Role),
     {match, [{0, LenRole}]} = re:run(Role, "[a-zA-Z][a-zA-Z_\\d]*", [unicode]),
-    false = lists:member(Role, AllowRoles),
     validation_add_allow_roles(RoleList, AllowRoles).
 
 -spec validation_roles(list(), list()) -> ok.
