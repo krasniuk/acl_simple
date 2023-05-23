@@ -44,7 +44,7 @@ get_roles(_Config) ->
     ReqBody = jsone:encode(Body),
     {ok, {_, _, RespBody}} = httpc:request(post, {?URL_CUSTOMER, ?HEADERS, "application/json;charset=UTF-8", ReqBody},
         [{timeout, 4000}], [{body_format, binary}]),
-    ok = ct:pal("show_roles ~p ~n RespBody = ~p", [<<"mike">>, RespBody]),
+    ok = ct:pal("get_roles ~p ~n RespBody = ~p", [<<"mike">>, RespBody]),
     #{<<"result">> := <<"ok">>,
         <<"roles">> := _ListRoles} = jsone:decode(RespBody).
 

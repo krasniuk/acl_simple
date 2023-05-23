@@ -5,7 +5,7 @@
 -include("include/sys_config.hrl").
 
 -export([all/0, init_per_suite/1, end_per_suite/1, groups/0]).
--export([test_script/1, show_allow_roles/1]).
+-export([test_script/1, allow_roles/1, delete_allow_roles/1]).
 
 -define(URL_ADMIN, "http://127.0.0.1:1913/admin").
 -define(HEADERS, [{"Content-type", "application/json;charset=UTF-8"}]).
@@ -26,6 +26,24 @@ init_per_suite(Config) ->
             ok = request(add_allow_roles, {[<<"read">>, <<"write">>, <<"exec">>]});
         _Other ->
             ok
+    end,
+    case lists:member(<<"r1913">>, AllowRoles) of
+        false ->
+            ok;
+        true ->
+            ok = request(delete_allow_roles, {[<<"r1913">>]})
+    end,
+    case lists:member(<<"w1913">>, AllowRoles) of
+        false ->
+            ok;
+        true ->
+            ok = request(delete_allow_roles, {[<<"w1913">>]})
+    end,
+    case lists:member(<<"e1913">>, AllowRoles) of
+        false ->
+            ok;
+        true ->
+            ok = request(delete_allow_roles, {[<<"e1913">>]})
     end,
     ListUsers = request(show_all_users, {}),
     IsMike = lists:member(<<"mike1913_test">>, ListUsers),
@@ -53,7 +71,8 @@ groups() ->
 all() ->
     [
         test_script,
-        show_allow_roles
+        allow_roles,
+        delete_allow_roles
     ].
 
 
@@ -89,8 +108,9 @@ test_script(_Config) ->
     Users2 = request(show_all_users, {}),
     false = lists:member(<<"mike1913_test">>, Users2).
 
-show_allow_roles(_Config) ->
+allow_roles(_Config) ->
     AllowRoles = request(show_allow_roles, {}),
+    ok = request(add_allow_roles, {[<<"r1913">>, <<"w1913">>]}),
     ok = request(add_allow_roles, {[<<"r1913">>, <<"w1913">>, <<"e1913">>]}),
     AllowRoles1 = request(show_allow_roles, {}),
     true = lists:member(<<"r1913">>, AllowRoles1),
@@ -101,6 +121,34 @@ show_allow_roles(_Config) ->
     false = lists:member(hd(AllowRoles), AllowRoles2),
     ok = request(add_allow_roles, {[hd(AllowRoles)]}),
     AllowRoles = request(show_allow_roles, {}).
+
+delete_allow_roles(_Config) ->
+    PassHash = binary_to_list(crypto:hash(sha, <<"1234">>)),
+    ok = request(user_add, {<<"mike1913_test">>, PassHash}),
+    ok = request(user_add, {<<"karl1913_test">>, PassHash}),
+    ok = request(add_allow_roles, {[<<"r1913">>, <<"w1913">>, <<"e1913">>]}),
+    AllowRoles = request(show_allow_roles, {}),
+    true = lists:member(<<"e1913">>, AllowRoles),
+    ok = request(roles_add, {<<"karl1913_test">>, [<<"r1913">>, <<"w1913">>]}),
+    ok = request(roles_add, {<<"mike1913_test">>, [<<"r1913">>, <<"w1913">>, <<"e1913">>]}),
+    KarlRoles = request(show_roles, {<<"karl1913_test">>}),
+    MikeRoles = request(show_roles, {<<"mike1913_test">>}),
+    true = lists:member(<<"r1913">>, KarlRoles),
+    true = lists:member(<<"w1913">>, MikeRoles),
+    ok = request(delete_allow_roles, {[<<"r1913">>, <<"w1913">>]}),
+    [<<"e1913">>] = request(show_roles, {<<"mike1913_test">>}),
+    ok = timer:sleep(1000),
+    [] = request(show_roles, {<<"karl1913_test">>}),
+    AllowRoles1 = request(show_allow_roles, {}),
+    false = lists:member(<<"w1913">>, AllowRoles1),
+    true = lists:member(<<"e1913">>, AllowRoles1),
+    ok = request(delete_allow_roles, {[<<"e1913">>]}),
+    ok = request(user_delete, {<<"mike1913_test">>}),
+    Users1 = request(show_all_users, {}),
+    false = lists:member(<<"mike1913_test">>, Users1),
+    ok = request(user_delete, {<<"karl1913_test">>}),
+    Users2 = request(show_all_users, {}),
+    false = lists:member(<<"mike1913_test">>, Users2).
 
 
 % -----------------------------------
