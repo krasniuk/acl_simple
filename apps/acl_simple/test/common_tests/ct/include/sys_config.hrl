@@ -4,18 +4,9 @@
     [
         {acl_simple, [
             {listen_port, 1913},
-            {timer_cache, 10000},
-% --- amqp_client ---
-            {mq_user, "admin"},
-            {mq_password, "48228"},
-            {mq_host, "127.0.0.1"},
-            {mq_reserve_host, "127.0.0.1"},
-            {mq_queue, "acl_queue"},
-            {mq_virtual_host, "/"},
-            {mq_consume_limit, 1}
-% === =========== ===
+            {timer_cache, 2000},
+            {timer_allow_roles, 4000}
         ]},
-
         {poolboy, [
             {pools, [
                 {pg_pool, [
@@ -32,12 +23,7 @@
                     {database, "civil"}]}
             ]}
         ]},
-
         {lager, [
-%% What handlers to install with what arguments
-%% The defaults for the logfiles are to rotate the files when
-%% they reach 10Mb or at midnight, whichever comes first, and keep
-%% the last 31 rotations.
             {handlers, [
                 {lager_console_backend, [{level, debug}]},
                 {lager_file_backend, [
@@ -69,29 +55,12 @@
                     {count, 2}
                 ]}
             ]},
-
-%% Whether to write a crash log, and where.
-%% Commented/omitted/undefined means no crash logger.
             {crash_log, "crash.log"},
-
-%% Maximum size in bytes of events in the crash log - defaults to 65536
             {crash_log_msg_size, 65536},
-
-%% Maximum size of the crash log in bytes, before its rotated, set
-%% to 0 to disable rotation - default is 0
             {crash_log_size, 10485760},
-
-%% What time to rotate the crash log - default is no time
-%% rotation.
             {crash_log_date, "$D0"},
-
-%% Number of rotated crash logs to keep, 0 means keep only the
-%% current one - default is 0
             {crash_log_count, 5},
-
-%% Whether to redirect error_logger messages into lager - defaults to true
             {error_logger_redirect, true},
-
             {error_logger_hwm, 400}
         ]}
     ]).

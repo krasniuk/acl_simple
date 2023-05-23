@@ -1,1 +1,1 @@
-{suites, "./ct/", [test_fail_SUITE]}.
+{suites, "./ct/", [admin_ok_script_SUITE]}.
