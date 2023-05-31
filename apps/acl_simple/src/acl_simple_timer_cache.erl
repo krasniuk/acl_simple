@@ -49,8 +49,9 @@ handle_info({timer_cache, PauseTime}, #{timer_cache := T} = State) ->
     Timer = case timer_cache_handler() of
                 {error, _} ->
                     erlang:send_after(2000, self(), {timer_cache, PauseTime});
-                Map ->
-                    true = ets:insert(acl_simple, [{server_cache, Map}]),
+                {MapCache, MapPassHash} ->
+                    true = ets:insert(acl_simple, [{server_cache, MapCache}]),
+                    true = ets:insert(acl_simple, [{customer_passhash, MapPassHash}]),
                     erlang:send_after(PauseTime, self(), {timer_cache, PauseTime})
             end,
     {noreply, State#{timer_cache := Timer}};
@@ -87,23 +88,24 @@ allow_roles_handler() ->
             handler_convert_to_map(AllowRoles)
     end.
 
--spec timer_cache_handler() -> {error, any()} | map().
+-spec timer_cache_handler() -> {error, any()} | {map(), map()}.
 timer_cache_handler() ->
     case acl_simple_pg:select("get_all_users", []) of
         {error, Error} ->
             {error, Error};
         {ok, _, Users} ->
-            convert_to_map(Users, #{})
+            convert_to_map(Users, #{}, #{})
     end.
 
--spec convert_to_map(list(), #{}) -> map().
-convert_to_map([], Map) ->
-    Map;
-convert_to_map([{Name} | T], Map) ->
+-spec convert_to_map(list(), #{}, #{}) -> {map(), map()}.
+convert_to_map([], MapCache, MapPassHash) ->
+    {MapCache, MapPassHash};
+convert_to_map([{Name, PassHash} | T], MapCache, MapPassHash) ->
     {ok, _, RolesList_Dirty} = acl_simple_pg:select("get_roles_by_name", [Name]),
     RolesList = handler_convert_to_map(RolesList_Dirty),
-    Map1 = Map#{Name => RolesList},
-    convert_to_map(T, Map1).
+    MapCache1 = MapCache#{Name => RolesList},
+    MapPassHash1 = MapPassHash#{Name => jsone:decode(PassHash)},
+    convert_to_map(T, MapCache1, MapPassHash1).
 
 
 %% ------------------------------------------

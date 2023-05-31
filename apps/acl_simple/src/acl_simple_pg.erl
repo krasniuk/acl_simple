@@ -113,13 +113,14 @@ parse(Conn) ->
     {ok, _} = epgsql:parse(Conn, "get_passhash", "SELECT passhash FROM users WHERE name = $1", [varchar]),
     {ok, _} = epgsql:parse(Conn, "get_admin_passhash", "SELECT passhash FROM admins WHERE login = $1", [varchar]),
     {ok, _} = epgsql:parse(Conn, "roles_add_by_name", "INSERT INTO roles (user_id, role) VALUES ((SELECT id FROM users WHERE name = $1), $2)", [varchar, varchar]),
-    {ok, _} = epgsql:parse(Conn, "get_all_users", "SELECT name FROM users", []),
+    {ok, _} = epgsql:parse(Conn, "get_all_users", "SELECT name, passhash FROM users", []),
     {ok, _} = epgsql:parse(Conn, "get_roles_by_name", "SELECT role FROM roles WHERE user_id = (SELECT id FROM users WHERE name = $1)", [varchar]),
     {ok, _} = epgsql:parse(Conn, "users_delete_by_name", "DELETE FROM users WHERE name = $1", [varchar]),
     {ok, _} = epgsql:parse(Conn, "roles_delete_by_name", "DELETE FROM roles WHERE user_id = (SELECT id FROM users WHERE name = $1) AND role = $2", [varchar, varchar]),
     ok.
 
 send_to_bd(undefined, _, _) ->
+    ?LOG_ERROR("acl_simple_pg: no connect to db", []),
     {error, no_connect};
 send_to_bd(Conn, Statement, Args) -> % INTERFACE between prepared_query of DB, and handle_call...
     case epgsql:prepared_query(Conn, Statement, Args) of

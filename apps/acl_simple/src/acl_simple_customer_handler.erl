@@ -25,7 +25,7 @@ handle_req(Req) ->
     {ok, Body, _Req} = cowboy_req:read_body(Req),
     ?LOG_DEBUG("Post request ~p~n", [Body]),
     {Status, Json} = handle_body(Body),
-    ?LOG_DEBUG("Post reply ~p~n", [Status]),
+    ?LOG_DEBUG("Post reply ~p~n", [Json]),
     cowboy_req:reply(Status, #{<<"content-type">> => <<"application/json; charset=UTF-8">>}, Json, Req).
 
 handle_body(Body) ->
@@ -64,13 +64,13 @@ handle_parameters({Login, PassHash}, #{<<"method">> := Method} = Param) ->
 
 -spec auth(binary(), list(), binary()) -> true|false.
 auth(Login, Hash, _Method) ->
-    case acl_simple_pg:select("get_passhash", [Login]) of
-        {ok, _, [{JsonHash}]} ->
-            RealHash = jsone:decode(JsonHash),
-            RealHash == Hash;
-        {ok, _, []} ->
+    [{_, CachePassHash}] = ets:lookup(acl_simple, customer_passhash),
+    case maps:get(Login, CachePassHash, undefined) of
+        undefined ->
             ?LOG_ERROR("Inditification fail", []),
-            false
+            false;
+        RealHash ->
+            RealHash == Hash
     end.
 
 

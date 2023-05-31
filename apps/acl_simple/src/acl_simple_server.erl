@@ -116,23 +116,28 @@ delete_allow_roles_handler([Role|ListRoles]) ->
 -spec user_add_handler(binary(), list()) -> map().
 user_add_handler(User, PassHash) ->
     [{_, Cache}] = ets:lookup(acl_simple, server_cache),
+    [{_, CachePassHash}] = ets:lookup(acl_simple, customer_passhash),
     ok = validation_user_add(User, Cache),
     ok = validation_passhash(PassHash),
     Uuid = list_to_binary(uuid:to_string(simple, uuid:uuid1())),
     % binary_to_list(crypto:hash(sha, <<"1234">>)).
     {ok, _} = acl_simple_pg:insert("user_add", [Uuid, User, jsone:encode(PassHash)]),
     true = ets:insert(acl_simple, [{server_cache, Cache#{User => []}}]),
+    true = ets:insert(acl_simple, [{customer_passhash, CachePassHash#{User => PassHash}}]),
     ?JSON_OK.
 
 -spec user_delete_handler(binary()) -> map().
 user_delete_handler(User) ->
     [{_, Cache}] = ets:lookup(acl_simple, server_cache),
+    [{_, CachePassHash}] = ets:lookup(acl_simple, customer_passhash),
     ok = validation_user(User, Cache),
     #{User := RolesList} = Cache,
     ok = delete_roles_in_db(RolesList, User),
     {ok, _} = acl_simple_pg:delete("users_delete_by_name", [User]),
     NewCache = maps:remove(User, Cache),
     true = ets:insert(acl_simple, [{server_cache, NewCache}]),
+    NewCachePassHash = maps:remove(User, CachePassHash),
+    true = ets:insert(acl_simple, [{customer_passhash, NewCachePassHash}]),
     ?JSON_OK.
 
 -spec roles_add_handler(binary(), list()) -> map().
