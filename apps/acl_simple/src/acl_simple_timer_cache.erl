@@ -66,8 +66,9 @@ handle_info({timer_allow_roles, PauseTime}, #{timer_allow_roles := T} = State) -
             end,
     {noreply, State#{timer_allow_roles := Timer}};
 handle_info(refresh_cache, State) ->
-    Cache = timer_cache_handler(),
+    {Cache, CachePassHash} = timer_cache_handler(),
     true = ets:insert(acl_simple, [{server_cache, Cache}]),
+    true = ets:insert(acl_simple, [{customer_passhash, CachePassHash}]),
     AllowRoles = allow_roles_handler(),
     true = ets:insert(acl_simple, [{allow_roles, AllowRoles}]),
     {noreply, State};
