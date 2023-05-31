@@ -12,6 +12,9 @@ Common tests build
 ----
     $ rebar3 ct --spec apps/acl_simple/tests/common_tests/ct.spec
 
+WRK
+----
+    $ wrk -t2 -c3 -d1m -R5700 -s apps/acl_simple/wrk/show_all_users.lua http://127.0.0.1:1913
     
 Data developer
 ---- 
