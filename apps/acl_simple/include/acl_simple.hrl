@@ -12,8 +12,5 @@
 -define(JSON_SHOW_ALLOW_ROLES(ListRoles), #{<<"result">> => <<"ok">>, <<"roles">> => ListRoles}).
 -define(JSON_USERS(Users),                #{<<"result">> => <<"ok">>, <<"users">> => Users}).
 -define(JSON_CUSTOM_GET_ROLES_OK(Roles),  #{<<"result">> => <<"ok">>, <<"roles">> => Roles}).
--define(JSON_ROLES_OF_USER(UserName, Roles),
-    #{<<"result">> => <<"ok">>,
-        <<"user">> => UserName,
-        <<"roles">> => Roles}).
-
+-define(JSON_ROLES_OF_USER(UserName, Roles), #{<<"result">> => <<"ok">>, <<"user">> => UserName, <<"roles">> => Roles}).
+-define(JSON_DEVELOPMENT,                    #{<<"result">> => <<"develop now">>}).

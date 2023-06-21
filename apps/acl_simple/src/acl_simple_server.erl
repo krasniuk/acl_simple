@@ -4,7 +4,17 @@
 
 -include("acl_simple.hrl").
 
+%% ------------------------------------------------------------------
+%% gen_server Function Exports
+%% ------------------------------------------------------------------
+
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3]).
+
+
+%% ------------------------------------------------------------------
+%% API Function Exports
+%% ------------------------------------------------------------------
+
 -export([start_link/0, stop/1]).
 
 
@@ -18,9 +28,9 @@ stop(Pid) ->
     gen_server:call(Pid, terminate).
 
 
-% ====================================================
-% Inverse functions
-% ====================================================
+%% ------------------------------------------------------------------
+%% gen_server Function Definitions
+%% ------------------------------------------------------------------
 
 init([]) ->
     true = ets:insert(acl_simple, [{acl_simple_server, self()}]),
@@ -173,7 +183,7 @@ roles_delete_handler(User, Roles) ->
     ?JSON_OK.
 
 
-% ====================================================
+%%% =============================================================
 
 -spec validation_add_allow_roles(list(), list()) -> ok.
 validation_add_allow_roles([], _) ->
