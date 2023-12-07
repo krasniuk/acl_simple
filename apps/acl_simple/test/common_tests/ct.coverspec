@@ -1,0 +1,11 @@
+{level, overview}.
+{incl_mods, [
+    acl_simple,
+    acl_simple_admin_handler,
+    acl_simple_app,
+    acl_simple_customer_handler,
+    acl_simple_pg,
+    acl_simple_server,
+    acl_simple_sup,
+    acl_simple_timer_cache
+]}.
