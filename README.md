@@ -10,7 +10,7 @@ Build
 
 Common tests build
 ----
-    $ rebar3 ct --spec apps/acl_simple/tests/common_tests/ct.spec
+    $ rebar3 ct --spec apps/acl_simple/test/common_tests/ct.spec
 
 WRK
 ----
