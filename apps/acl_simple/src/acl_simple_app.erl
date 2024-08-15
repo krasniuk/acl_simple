@@ -6,7 +6,7 @@
 
 -export([start/2, stop/1]).
 
-%%noinspection Erlang17Syntax
+
 start(normal, _StartArgs) ->
     ?LOG_INFO("~n~n ========== Application start ==========", []),
     acl_simple = ets:new(acl_simple, [set, public, named_table]),
@@ -23,7 +23,13 @@ start(normal, _StartArgs) ->
     {ok, _} = cowboy:start_clear(http, [{port, Port}], #{
         env => #{dispatch => Dispatch}
     }),
-    acl_simple_sup:start_link().
+    acl_simple_sup:start_link();
+
+start({takeover, NodeCluster}, StartArg) ->
+    _Pid = spawn(NodeCluster, acl_simple_app, stop, [null]), %% delete cluster run before execute main node acl_simple
+    ok = timer:sleep(1000),                                  %% wait wile deleted
+    start(normal, StartArg).
+
 
 stop(_State) ->
     ok = cowboy:stop_listener(http).
