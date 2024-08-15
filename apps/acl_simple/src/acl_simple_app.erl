@@ -7,7 +7,7 @@
 -export([start/2, stop/1]).
 
 %%noinspection Erlang17Syntax
-start(_StartType, _StartArgs) ->
+start(normal, _StartArgs) ->
     ?LOG_INFO("~n~n ========== Application start ==========", []),
     acl_simple = ets:new(acl_simple, [set, public, named_table]),
     true = ets:insert(acl_simple, [{server_cache, #{}}]),
