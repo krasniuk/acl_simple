@@ -1,4 +1,4 @@
-{level, overview}.
+{level, details}.
 {incl_mods, [
     acl_simple,
     acl_simple_admin_handler,

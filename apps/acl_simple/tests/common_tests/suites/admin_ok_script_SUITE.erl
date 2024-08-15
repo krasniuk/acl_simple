@@ -1,14 +1,10 @@
 -module(admin_ok_script_SUITE).
 -author('Mykhailo Krasniuk <miha.190901@gmail.com>').
 
--include_lit("common_test/include/ct.hrl").
--include("include/sys_config.hrl").
+-include("../include/test.hrl").
 
 -export([all/0, init_per_suite/1, end_per_suite/1, groups/0]).
 -export([test_script/1, allow_roles/1, delete_allow_roles/1]).
-
--define(URL_ADMIN, "http://127.0.0.1:1913/admin").
--define(HEADERS, [{"Content-type", "application/json;charset=UTF-8"}]).
 
 
 %% ==================================
@@ -16,7 +12,7 @@
 %% ==================================
 
 init_per_suite(Config) ->
-    ok = application:set_env(?START_ENV),
+    ok = application:unset_env(kernel, sync_nodes_mandatory),
     ok = acl_simple:start(),
 
     ok = timer:sleep(1000),

@@ -5,12 +5,15 @@ Build
 -----
     $ make rel
     $ ./_build/prod/rel/acl_simple/bin/acl_simple console
-    "or"
-    $ ./run.sh
+    
+or
 
-Common tests build
+    $ ./run_main.sh
+    $ ./run_cluster1.sh
+
+Common tests + EUnit tests
 ----
-    $ rebar3 ct --spec apps/acl_simple/test/common_tests/ct.spec
+    $ rebar3 ct --spec apps/acl_simple/tests/test.spec
 
 WRK
 ----
