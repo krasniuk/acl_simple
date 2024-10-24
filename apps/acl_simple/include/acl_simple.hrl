@@ -7,7 +7,7 @@
 -define(LOG_CRITICAL(Format, Args), lager:log(critical, self(), Format, Args)).
 
 
--define(JSON_ERROR(Req),                  #{<<"result">> => <<"error">>, <<"discription">> => list_to_binary(Req)}).
+-define(JSON_ERROR(Req),                  #{<<"result">> => <<"fail">>, <<"discription">> => Req}).
 -define(JSON_OK,                          #{<<"result">> => <<"ok">>}).
 -define(JSON_SHOW_ALLOW_ROLES(ListRoles), #{<<"result">> => <<"ok">>, <<"roles">> => ListRoles}).
 -define(JSON_USERS(Users),                #{<<"result">> => <<"ok">>, <<"users">> => Users}).

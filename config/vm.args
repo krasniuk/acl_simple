@@ -1,5 +1,5 @@
 
--sname acl_simple_main
+-sname acl_simple_cluster1
 
 -setcookie acl_simple_cookie
 

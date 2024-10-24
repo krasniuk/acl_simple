@@ -28,6 +28,9 @@ Data developer
 
     Cache saves in ets. Table 'acl_simple' in key 'server_cache'. 
 
+    login: admin
+    pass: 12345678
+
 API
 -----
     acl_simple_server:

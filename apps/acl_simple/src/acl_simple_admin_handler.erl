@@ -34,7 +34,7 @@ handle_body(Body) ->
     catch
         Exception:Reason ->
             ?LOG_ERROR("jsone:decode error (~p : ~p)", [Exception, Reason]),
-            {206, jsone:encode(#{<<"fail">> => <<"Invalid request format">>})}
+            {400, jsone:encode(?JSON_ERROR(<<"Invalid request format">>))}
     end.
 
 handle_package(Map) ->
@@ -46,7 +46,7 @@ handle_package(Map) ->
     catch
         Class:Reason ->
             ?LOG_ERROR("Catch error (~p : ~p)", [Class, Reason]),
-            {206, jsone:encode(#{<<"fail">> => <<"Invalid request format">>})}
+            {206, jsone:encode(?JSON_ERROR(<<"Invalid request format">>))}
     end.
 
 handle_parameters({Login, PassHash}, #{<<"method">> := Method} = ParamPack) ->
@@ -55,13 +55,12 @@ handle_parameters({Login, PassHash}, #{<<"method">> := Method} = ParamPack) ->
             handle_method(Method, ParamPack);
         false ->
             ?LOG_ERROR("Auth error, login ~p method ~p~n", [Login, Method]),
-            {206, jsone:encode(#{<<"fail">> => <<"Invalid passhash or role absent">>})}
+            {401, jsone:encode(?JSON_ERROR(<<"Invalid passhash or role absent">>))}
     end.
 
 -spec auth(binary(), list(), binary()) -> true|false.
 auth(Login, Hash, _Method) ->
-    {ok, _, [{JsonHash}]} = acl_simple_pg:select("get_admin_passhash", [Login]),
-    RealHash = jsone:decode(JsonHash),
+    {ok, _, [{RealHash}]} = acl_simple_pg:select("get_admin_passhash", [Login]),
     RealHash == Hash.
 
 -spec handle_method(binary(), map()) -> {integer(), binary()}.
